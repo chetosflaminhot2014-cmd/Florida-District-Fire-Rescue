@@ -219,6 +219,17 @@ func _show_settings() -> void:
 	invert.button_pressed = invert_camera
 	invert.toggled.connect(func(value: bool): invert_camera = value)
 	menu_panel.add_child(invert)
+	var sensitivity_label := Label.new()
+	sensitivity_label.text = "Sensibilidad de cámara"
+	menu_panel.add_child(sensitivity_label)
+	var sensitivity := HSlider.new()
+	sensitivity.min_value = 0.001
+	sensitivity.max_value = 0.006
+	sensitivity.step = 0.0005
+	sensitivity.value = mouse_sensitivity
+	sensitivity.custom_minimum_size = Vector2(260, 28)
+	sensitivity.value_changed.connect(func(value: float): mouse_sensitivity = value)
+	menu_panel.add_child(sensitivity)
 	_add_button("VOLVER", _show_main_menu)
 
 func _show_credits() -> void:
@@ -354,16 +365,27 @@ func _create_civilian_building(base_position: Vector3, building_color: Color) ->
 	var size_z := rng.randf_range(9.0, 14.0)
 	var style := rng.randi_range(0, 2)
 	if style == 0:
-		# Small suburban house with a pitched-looking roof made from a simple cap.
 		height = rng.randf_range(4.0, 6.0)
 		size_x = rng.randf_range(8.0, 10.0)
 		size_z = rng.randf_range(8.0, 11.0)
 	_box("CivilianBuilding", Vector3(size_x, height, size_z), base_position + Vector3(0, height / 2.0, 0), building_color, true)
 	var roof_color := building_color.darkened(0.28)
-	_box("CivilianRoof", Vector3(size_x + 0.55, 0.35, size_z + 0.55), base_position + Vector3(0, height + 0.15, 0), roof_color, false)
-	for floor_index in range(1, max(2, int(height / 2.5))):
-		for window_index in range(2):
-			_box("CivilianWindow", Vector3(1.2, 0.8, 0.07), base_position + Vector3(-size_x * 0.24 + window_index * size_x * 0.48, floor_index * 2.2, -size_z / 2.0 - 0.05), Color(0.14, 0.28, 0.38), false)
+	if style == 0:
+		# Techo a dos aguas simulado con una pieza elevada y aleros visibles.
+		_box("HouseRoof", Vector3(size_x + 0.9, 0.35, size_z + 0.9), base_position + Vector3(0, height + 0.18, 0), roof_color, false)
+	else:
+		_box("BuildingRoof", Vector3(size_x + 0.5, 0.28, size_z + 0.5), base_position + Vector3(0, height + 0.14, 0), roof_color, false)
+	# Fachada con ventanas separadas, marcos y puerta reconocible.
+	var floors := max(1, int(height / 2.6))
+	for floor_index in range(floors):
+		for window_index in range(3):
+			var wx := -size_x * 0.32 + window_index * size_x * 0.32
+			var wy := 1.4 + floor_index * 2.35
+			_box("WindowFrame", Vector3(1.45, 1.05, 0.16), base_position + Vector3(wx, wy, -size_z / 2.0 - 0.08), Color(0.88, 0.83, 0.68), false)
+			_box("CivilianWindow", Vector3(1.18, 0.8, 0.08), base_position + Vector3(wx, wy, -size_z / 2.0 - 0.17), Color(0.12, 0.29, 0.4), false)
+	_box("FrontDoor", Vector3(1.15, 2.15, 0.12), base_position + Vector3(0, 1.08, -size_z / 2.0 - 0.12), Color(0.18, 0.12, 0.08), false)
+	if style == 0:
+		_box("Porch", Vector3(2.8, 0.18, 1.2), base_position + Vector3(0, 0.12, -size_z / 2.0 - 0.6), Color(0.55, 0.52, 0.45), false)
 
 func _create_trees() -> void:
 	for i in range(34):
@@ -443,22 +465,49 @@ func _create_player(female: bool) -> void:
 	camera_pivot.add_child(camera)
 
 func _make_person(female: bool, police: bool, role: String = "civilian") -> Node3D:
+	# Personajes 3D estilizados con cápsulas y esferas, sin cuerpos hechos de cubos.
 	var person := Node3D.new()
 	var uniform := Color(0.07, 0.12, 0.23) if police else Color(rng.randf_range(0.25,0.85), rng.randf_range(0.25,0.8), rng.randf_range(0.25,0.8))
 	if role == "ems": uniform = Color(0.04, 0.38, 0.42)
 	elif role == "fire": uniform = Color(0.62, 0.08, 0.06)
 	elif role == "sheriff": uniform = Color(0.42, 0.32, 0.12)
-	_add_person_box(person, Vector3(0.55, 0.75, 0.3), Vector3(0, 1.0, 0), uniform)
-	_add_person_box(person, Vector3(0.22, 0.55, 0.24), Vector3(-0.19, 0.36, 0), uniform.darkened(0.12))
-	_add_person_box(person, Vector3(0.22, 0.55, 0.24), Vector3(0.19, 0.36, 0), uniform.darkened(0.12))
-	_add_person_box(person, Vector3(0.17, 0.55, 0.18), Vector3(-0.39, 1.0, 0), uniform)
-	_add_person_box(person, Vector3(0.17, 0.55, 0.18), Vector3(0.39, 1.0, 0), uniform)
-	_sphere_child(person, Vector3(0, 1.65, 0), 0.25, Color(0.72,0.53,0.4))
-	if police:
-		_add_person_box(person, Vector3(0.22, 0.13, 0.05), Vector3(0, 1.12, -0.17), Color(0.85,0.72,0.2))
+	var skin := Color(0.72, 0.53, 0.4)
+	var pants := Color(0.045, 0.065, 0.1) if police or role == "sheriff" else Color(0.12, 0.13, 0.16)
+	_add_person_capsule(person, Vector3(0, 1.08, 0), 0.29, 0.72, uniform)
+	_add_person_capsule(person, Vector3(-0.16, 0.43, 0), 0.105, 0.55, pants)
+	_add_person_capsule(person, Vector3(0.16, 0.43, 0), 0.105, 0.55, pants)
+	_add_person_capsule(person, Vector3(-0.39, 1.04, 0), 0.095, 0.55, uniform, Vector3(0, 0, -10))
+	_add_person_capsule(person, Vector3(0.39, 1.04, 0), 0.095, 0.55, uniform, Vector3(0, 0, 10))
+	_add_person_capsule(person, Vector3(-0.16, 0.12, -0.015), 0.105, 0.22, Color(0.025, 0.03, 0.04))
+	_add_person_capsule(person, Vector3(0.16, 0.12, -0.015), 0.105, 0.22, Color(0.025, 0.03, 0.04))
+	_sphere_child(person, Vector3(0, 1.64, 0), 0.22, skin)
+	_add_person_capsule(person, Vector3(0, 1.43, 0), 0.09, 0.12, skin)
+	if police or role == "sheriff":
+		_add_person_capsule(person, Vector3(0, 1.84, 0), 0.23, 0.09, Color(0.045, 0.065, 0.1))
+		_add_person_capsule(person, Vector3(0, 1.77, 0), 0.24, 0.035, Color(0.8, 0.65, 0.2))
+		_sphere_child(person, Vector3(0.12, 1.1, -0.245), 0.055, Color(0.9, 0.72, 0.18))
+	elif role == "fire":
+		_add_person_capsule(person, Vector3(0, 1.82, 0), 0.23, 0.08, Color(0.88, 0.48, 0.08))
+	elif role == "ems":
+		_add_person_capsule(person, Vector3(0, 1.82, 0), 0.22, 0.07, Color(0.8, 0.85, 0.86))
 	return person
 
+func _add_person_capsule(parent: Node3D, pos: Vector3, radius: float, height: float, color: Color, angles := Vector3.ZERO) -> void:
+	var mesh_node := MeshInstance3D.new()
+	var mesh := CapsuleMesh.new()
+	mesh.radius = radius
+	mesh.height = maxf(height, radius * 2.0)
+	mesh_node.mesh = mesh
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.82
+	mesh_node.material_override = material
+	mesh_node.position = pos
+	mesh_node.rotation_degrees = angles
+	parent.add_child(mesh_node)
+
 func _add_person_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> void:
+	# Se conserva para detalles de vehículos; los personajes usan cápsulas.
 	var m := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
 	mesh.size = size
