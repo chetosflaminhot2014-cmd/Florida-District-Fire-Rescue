@@ -417,6 +417,7 @@ func _start_game(female: bool) -> void:
 	_create_world()
 	_create_player(female)
 	_create_vehicle()
+	_create_second_patrol()
 	_create_service_vehicles()
 	_create_npcs(18)
 	_create_hud()
@@ -857,6 +858,31 @@ func _create_vehicle() -> void:
 	patrol_red_light = _add_person_box(vehicle, Vector3(0.32, 0.13, 0.22), Vector3(-0.34, 1.52, -0.05), Color(0.95, 0.025, 0.025))
 	_add_person_box(vehicle, Vector3(0.24, 0.13, 0.22), Vector3(0.0, 1.52, -0.05), Color(0.94, 0.94, 0.88))
 	patrol_blue_light = _add_person_box(vehicle, Vector3(0.32, 0.13, 0.22), Vector3(0.34, 1.52, -0.05), Color(0.025, 0.12, 0.98))
+
+
+func _create_second_patrol() -> void:
+	# Segunda patrulla estacionada; la primera conserva el sistema de conducción actual.
+	var parked_patrol := StaticBody3D.new()
+	parked_patrol.name = "PatrolCar_RCMP_FordExplorer"
+	parked_patrol.position = Vector3(-29.0, 0.35, 3.0)
+	game_world.add_child(parked_patrol)
+
+	var shape_node := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(2.2, 1.6, 4.8)
+	shape_node.shape = shape
+	shape_node.position.y = 0.8
+	parked_patrol.add_child(shape_node)
+
+	var patrol_scene := load("res://rcmp_ford_explorer.glb") as PackedScene
+	if patrol_scene != null:
+		var patrol_visual := patrol_scene.instantiate()
+		patrol_visual.name = "RCMPFordExplorerModel"
+		if patrol_visual is Node3D:
+			patrol_visual.position = Vector3.ZERO
+		parked_patrol.add_child(patrol_visual)
+	else:
+		push_error("No se pudo cargar res://rcmp_ford_explorer.glb")
 
 
 func _create_service_vehicles() -> void:
