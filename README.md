@@ -16,10 +16,10 @@ A lightweight Godot 4 project for Windows PC and Android, set in the fictional M
 ## Build downloads
 
 GitHub Actions workflow **Build Police Officer Simulator (PC + Android)** exports:
-- `PoliceOfficerSimulator.exe` for Windows x86_64.
-- `PoliceOfficerSimulator.apk` for Android arm64.
+- `PoliceOfficerSimulator.exe` for Windows x86_64, artifact `PoliceOfficerSimulator-Windows-PC`.
+- `PoliceOfficerSimulator.apk` for Android arm64, artifact `PoliceOfficerSimulator-Android-APK`.
 
-Open the repository's **Actions** tab and select the latest successful run, then download the `Police-Officer-Simulator-PC-Android` artifact.
+Open the repository's **Actions** tab and select the latest successful run. Download the Windows and Android artifacts separately.
 
 ## Important scope note
 
