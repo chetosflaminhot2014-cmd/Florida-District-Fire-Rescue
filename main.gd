@@ -1024,17 +1024,17 @@ func _create_hud() -> void:
 	pause.offset_bottom = 96
 	pause.pressed.connect(_toggle_pause_menu)
 	hud_layer.add_child(pause)
-	# Touch controls are always visible on Android and harmless on PC.
-	_touch_button("▲", Vector2(24, -160), Vector2(66, 60), func(): touch_move.y = -1.0, func(): touch_move.y = 0.0)
-	_touch_button("▼", Vector2(24, -88), Vector2(66, 60), func(): touch_move.y = 1.0, func(): touch_move.y = 0.0)
-	_touch_button("◀", Vector2(96, -88), Vector2(66, 60), func(): touch_move.x = -1.0, func(): touch_move.x = 0.0)
-	_touch_button("▶", Vector2(168, -88), Vector2(66, 60), func(): touch_move.x = 1.0, func(): touch_move.x = 0.0)
-	_touch_button("CORRER", Vector2(-150, -100), Vector2(120, 54), func(): touch_run = true, func(): touch_run = false, true)
-	_touch_button("USAR / BAJAR", Vector2(-150, -38), Vector2(120, 54), func(): pass, Callable(), true)
-	_touch_button("LUCES", Vector2(-150, -162), Vector2(120, 50), func(): pass, Callable(), true)
-	_touch_button("FRENO", Vector2(-150, -220), Vector2(120, 50), func(): touch_brake = true, func(): touch_brake = false, true)
-	_touch_button("ESCOPETA", Vector2(-150, -278), Vector2(120, 48), func(): _equip_weapon("ESCOPETA"), Callable(), true)
-	_touch_button("RIFLE", Vector2(-150, -334), Vector2(120, 48), func(): _equip_weapon("RIFLE"), Callable(), true)
+	# Controles táctiles reorganizados: cruceta compacta a la izquierda y acciones grandes a la derecha.
+	_touch_button("▲", Vector2(78, -198), Vector2(60, 56), func(): touch_move.y = -1.0, func(): touch_move.y = 0.0)
+	_touch_button("▼", Vector2(78, -78), Vector2(60, 56), func(): touch_move.y = 1.0, func(): touch_move.y = 0.0)
+	_touch_button("◀", Vector2(14, -138), Vector2(60, 56), func(): touch_move.x = -1.0, func(): touch_move.x = 0.0)
+	_touch_button("▶", Vector2(142, -138), Vector2(60, 56), func(): touch_move.x = 1.0, func(): touch_move.x = 0.0)
+	_touch_button("USAR / BAJAR", Vector2(-164, -70), Vector2(148, 56), func(): pass, Callable(), true)
+	_touch_button("LUCES", Vector2(-164, -132), Vector2(148, 52), func(): pass, Callable(), true)
+	_touch_button("CORRER", Vector2(-164, -190), Vector2(148, 52), func(): touch_run = true, func(): touch_run = false, true)
+	_touch_button("FRENO", Vector2(-164, -248), Vector2(148, 52), func(): touch_brake = true, func(): touch_brake = false, true)
+	_touch_button("ESCOPETA", Vector2(-164, -306), Vector2(148, 48), func(): _equip_weapon("ESCOPETA"), Callable(), true)
+	_touch_button("RIFLE", Vector2(-164, -360), Vector2(148, 46), func(): _equip_weapon("RIFLE"), Callable(), true)
 
 func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size: Vector2, on_down: Callable, on_up: Callable, right_side := false) -> void:
 	var b := Button.new()
