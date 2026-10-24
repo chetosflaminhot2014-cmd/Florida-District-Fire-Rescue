@@ -43,20 +43,60 @@ var multiplayer_name_input: LineEdit
 
 func _ready() -> void:
 	rng.randomize()
+	# Draw a safe startup screen first. If the full menu encounters a runtime
+	# error, this overlay remains visible instead of leaving a blank grey screen.
+	var startup_fallback := _create_startup_fallback()
 	# Keep a valid active camera while the menu is shown on Android and desktop.
-	# The gameplay camera replaces this one when the player starts a shift.
 	var menu_camera := Camera3D.new()
 	menu_camera.name = "MenuCamera"
 	menu_camera.position = Vector3(0, 2, 10)
-	menu_camera.current = true
 	add_child(menu_camera)
+	menu_camera.current = true
 	_create_menu()
+	startup_fallback.queue_free()
 	if has_node("/root/MultiplayerLobby"):
 		MultiplayerLobby.peer_joined.connect(_on_peer_joined)
 		MultiplayerLobby.peer_left.connect(_on_peer_left)
 		MultiplayerLobby.remote_state_received.connect(_on_remote_state_received)
 		MultiplayerLobby.network_status_changed.connect(_on_network_status_changed)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+func _create_startup_fallback() -> CanvasLayer:
+	var layer := CanvasLayer.new()
+	layer.name = "StartupFallback"
+	layer.layer = 100
+	add_child(layer)
+	var background := ColorRect.new()
+	background.name = "FallbackBackground"
+	background.color = Color(0.018, 0.035, 0.065)
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(background)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(center)
+	var column := VBoxContainer.new()
+	column.custom_minimum_size = Vector2(280, 0)
+	column.add_theme_constant_override("separation", 14)
+	center.add_child(column)
+	var title := Label.new()
+	title.text = "POLICE OFFICER SIMULATOR"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.add_theme_font_size_override("font_size", 23)
+	title.add_theme_color_override("font_color", Color(0.92, 0.96, 1.0))
+	column.add_child(title)
+	var message := Label.new()
+	message.text = "Iniciando Mirage Hills..."
+	message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	message.add_theme_color_override("font_color", Color(0.55, 0.75, 0.92))
+	column.add_child(message)
+	var retry := Button.new()
+	retry.text = "REINTENTAR"
+	retry.custom_minimum_size = Vector2(0, 48)
+	retry.pressed.connect(func(): get_tree().reload_current_scene())
+	column.add_child(retry)
+	return layer
 
 func _process(delta: float) -> void:
 	if not game_active:
