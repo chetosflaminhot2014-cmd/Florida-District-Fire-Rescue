@@ -33,10 +33,21 @@ var last_touch_position := Vector2.ZERO
 var npc_nodes: Array[Node3D] = []
 var npc_targets: Array[Vector3] = []
 var rng := RandomNumberGenerator.new()
+var remote_players: Dictionary = {}
+var network_send_timer := 0.0
+var dispatch_layer: CanvasLayer
+var dispatch_marker: MeshInstance3D
+var multiplayer_ip_input: LineEdit
+var multiplayer_name_input: LineEdit
 
 func _ready() -> void:
 	rng.randomize()
 	_create_menu()
+	if has_node("/root/MultiplayerLobby"):
+		MultiplayerLobby.peer_joined.connect(_on_peer_joined)
+		MultiplayerLobby.peer_left.connect(_on_peer_left)
+		MultiplayerLobby.remote_state_received.connect(_on_remote_state_received)
+		MultiplayerLobby.network_status_changed.connect(_on_network_status_changed)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 func _process(delta: float) -> void:
@@ -51,6 +62,7 @@ func _process(delta: float) -> void:
 				blue_light.color = Color(0.02, 0.2, 1.0) if not lights_red else Color(0.0, 0.03, 0.22)
 		return
 	_update_npcs(delta)
+	_update_remote_network(delta)
 	if is_instance_valid(status_label):
 		status_label.text = ("CONDUCIENDO — WASD / controles táctiles" if driving else "A PIE — WASD para moverte · E para usar el vehículo") + "   |   NPC: " + str(npc_nodes.size())
 
@@ -143,6 +155,7 @@ func _show_main_menu() -> void:
 	_clear_menu()
 	_add_title()
 	_add_button("JUGAR", _show_character_selection)
+	_add_button("MULTIJUGADOR", _show_multiplayer_menu)
 	_add_button("CONFIGURACIÓN", _show_settings)
 	_add_button("CRÉDITOS", _show_credits)
 
@@ -157,6 +170,42 @@ func _show_character_selection() -> void:
 	_add_button("OFICIAL MASCULINO", func(): _start_game(false))
 	_add_button("OFICIAL FEMENINA", func(): _start_game(true))
 	_add_button("VOLVER", _show_main_menu)
+
+func _show_multiplayer_menu() -> void:
+	_clear_menu()
+	_add_title()
+	var label := Label.new()
+	label.text = "MULTIJUGADOR · HASTA 8 UNIDADES"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	menu_panel.add_child(label)
+	multiplayer_name_input = LineEdit.new()
+	multiplayer_name_input.placeholder_text = "Nombre de unidad (opcional)"
+	multiplayer_name_input.text = "Officer"
+	menu_panel.add_child(multiplayer_name_input)
+	multiplayer_ip_input = LineEdit.new()
+	multiplayer_ip_input.placeholder_text = "IP del anfitrión para unirse"
+	multiplayer_ip_input.text = "127.0.0.1"
+	menu_panel.add_child(multiplayer_ip_input)
+	_add_button("CREAR SESIÓN", _host_multiplayer)
+	_add_button("UNIRSE A SESIÓN", _join_multiplayer)
+	var note := Label.new()
+	note.text = "Prueba inicial por LAN. Para jugar por Internet, el anfitrión necesita una red accesible por UDP 7000 o un servidor dedicado."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.add_theme_font_size_override("font_size", 11)
+	menu_panel.add_child(note)
+	_add_button("VOLVER", _show_main_menu)
+
+func _host_multiplayer() -> void:
+	if has_node("/root/MultiplayerLobby"):
+		MultiplayerLobby.player_name = multiplayer_name_input.text.strip_edges() if not multiplayer_name_input.text.strip_edges().is_empty() else "Officer"
+		if MultiplayerLobby.host_game() == OK:
+			_show_character_selection()
+
+func _join_multiplayer() -> void:
+	if has_node("/root/MultiplayerLobby"):
+		MultiplayerLobby.player_name = multiplayer_name_input.text.strip_edges() if not multiplayer_name_input.text.strip_edges().is_empty() else "Officer"
+		if MultiplayerLobby.join_game(multiplayer_ip_input.text) == OK:
+			_show_character_selection()
 
 func _show_settings() -> void:
 	_clear_menu()
@@ -193,8 +242,12 @@ func _start_game(female: bool) -> void:
 	_create_world()
 	_create_player(female)
 	_create_vehicle()
-	_create_npcs(14)
+	_create_npcs(18)
 	_create_hud()
+	_create_dispatch_system()
+	for peer_id in MultiplayerLobby.remote_states.keys():
+		var state: Dictionary = MultiplayerLobby.remote_states[peer_id]
+		_on_remote_state_received(int(peer_id), state["position"], float(state["rotation_y"]))
 	if OS.has_feature("mobile"):
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	else:
@@ -335,9 +388,12 @@ func _create_player(female: bool) -> void:
 	camera.current = true
 	camera_pivot.add_child(camera)
 
-func _make_person(female: bool, police: bool) -> Node3D:
+func _make_person(female: bool, police: bool, role: String = "civilian") -> Node3D:
 	var person := Node3D.new()
 	var uniform := Color(0.07, 0.12, 0.23) if police else Color(rng.randf_range(0.25,0.85), rng.randf_range(0.25,0.8), rng.randf_range(0.25,0.8))
+	if role == "ems": uniform = Color(0.04, 0.38, 0.42)
+	elif role == "fire": uniform = Color(0.62, 0.08, 0.06)
+	elif role == "sheriff": uniform = Color(0.42, 0.32, 0.12)
 	_add_person_box(person, Vector3(0.55, 0.75, 0.3), Vector3(0, 1.0, 0), uniform)
 	_add_person_box(person, Vector3(0.22, 0.55, 0.24), Vector3(-0.19, 0.36, 0), uniform.darkened(0.12))
 	_add_person_box(person, Vector3(0.22, 0.55, 0.24), Vector3(0.19, 0.36, 0), uniform.darkened(0.12))
@@ -396,13 +452,17 @@ func _create_npcs(count: int) -> void:
 	npc_targets.clear()
 	for i in range(count):
 		var npc := Node3D.new()
-		npc.name = "CivilianNPC_%02d" % i
+		var role := "civilian"
+		if i == 0 or i == 1: role = "sheriff"
+		elif i == 2 or i == 3: role = "ems"
+		elif i == 4 or i == 5: role = "fire"
+		npc.name = role.to_upper() + "_NPC_%02d" % i
 		var x := rng.randf_range(-85, 85)
 		var z := rng.randf_range(-85, 85)
 		if absf(x) < 10:
 			x += 18
 		npc.position = Vector3(x, 0, z)
-		npc.add_child(_make_person(false, false))
+		npc.add_child(_make_person(false, role == "sheriff", role))
 		game_world.add_child(npc)
 		npc_nodes.append(npc)
 		npc_targets.append(Vector3(rng.randf_range(-85,85), 0, rng.randf_range(-85,85)))
@@ -421,6 +481,74 @@ func _update_npcs(delta: float) -> void:
 		var direction := offset.normalized()
 		npc.position += direction * delta * 1.0
 		npc.rotation.y = atan2(direction.x, direction.z)
+
+func _create_dispatch_system() -> void:
+	dispatch_layer = load("res://dispatch_system.gd").new()
+	dispatch_layer.name = "DispatchSystem"
+	add_child(dispatch_layer)
+	dispatch_layer.call_accepted.connect(_on_dispatch_call_accepted)
+
+func _on_dispatch_call_accepted(location: Vector3, description: String) -> void:
+	if is_instance_valid(dispatch_marker):
+		dispatch_marker.queue_free()
+	dispatch_marker = MeshInstance3D.new()
+	dispatch_marker.name = "DispatchLocationMarker"
+	var marker_mesh := CylinderMesh.new()
+	marker_mesh.top_radius = 1.1
+	marker_mesh.bottom_radius = 1.1
+	marker_mesh.height = 0.12
+	dispatch_marker.mesh = marker_mesh
+	var marker_material := StandardMaterial3D.new()
+	marker_material.albedo_color = Color(1.0, 0.65, 0.08)
+	marker_material.emission_enabled = true
+	marker_material.emission = Color(0.8, 0.25, 0.02)
+	dispatch_marker.material_override = marker_material
+	dispatch_marker.position = location + Vector3(0, 0.12, 0)
+	game_world.add_child(dispatch_marker)
+	if is_instance_valid(status_label):
+		status_label.text = "911 ASIGNADO: " + description + " · Coordenadas %.0f, %.0f" % [location.x, location.z]
+
+func _update_remote_network(delta: float) -> void:
+	if not has_node("/root/MultiplayerLobby") or not is_instance_valid(player):
+		return
+	network_send_timer += delta
+	if network_send_timer >= 0.08:
+		network_send_timer = 0.0
+		var tracked := vehicle if driving and is_instance_valid(vehicle) else player
+		MultiplayerLobby.publish_player_state(tracked.global_position, tracked.rotation.y)
+
+func _on_peer_joined(peer_id: int) -> void:
+	if peer_id == multiplayer.get_unique_id() or not game_active:
+		return
+	_create_remote_player(peer_id)
+
+func _on_peer_left(peer_id: int) -> void:
+	if remote_players.has(peer_id) and is_instance_valid(remote_players[peer_id]):
+		remote_players[peer_id].queue_free()
+	remote_players.erase(peer_id)
+
+func _on_remote_state_received(peer_id: int, position: Vector3, rotation_y: float) -> void:
+	if not game_active or peer_id == multiplayer.get_unique_id():
+		return
+	if not remote_players.has(peer_id) or not is_instance_valid(remote_players[peer_id]):
+		_create_remote_player(peer_id)
+	var remote: Node3D = remote_players[peer_id]
+	remote.global_position = remote.global_position.lerp(position, 0.65)
+	remote.rotation.y = rotation_y
+
+func _create_remote_player(peer_id: int) -> void:
+	if not is_instance_valid(game_world) or remote_players.has(peer_id):
+		return
+	var remote := Node3D.new()
+	remote.name = "RemoteOfficer_%d" % peer_id
+	remote.add_child(_make_person(false, true, "sheriff"))
+	game_world.add_child(remote)
+	remote_players[peer_id] = remote
+	remote.position = Vector3(0, 0.1, 0)
+
+func _on_network_status_changed(message: String) -> void:
+	if is_instance_valid(status_label):
+		status_label.text = "RED: " + message
 
 func _create_hud() -> void:
 	hud_layer = CanvasLayer.new()
