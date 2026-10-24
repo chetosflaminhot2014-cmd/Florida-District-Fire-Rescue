@@ -64,6 +64,9 @@ func _ready() -> void:
 		MultiplayerLobby.remote_state_received.connect(_on_remote_state_received)
 		MultiplayerLobby.network_status_changed.connect(_on_network_status_changed)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	# CI-only gameplay smoke test: build the city, character, patrol car, and HUD headlessly.
+	if OS.get_cmdline_user_args().has("--smoke-test"):
+		_start_game(false)
 
 func _create_startup_fallback() -> CanvasLayer:
 	var layer := CanvasLayer.new()
