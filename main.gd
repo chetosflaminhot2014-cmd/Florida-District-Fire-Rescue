@@ -27,6 +27,9 @@ var light_timer := 0.0
 var lights_red := true
 var red_light: ColorRect
 var blue_light: ColorRect
+var patrol_red_light: MeshInstance3D
+var patrol_blue_light: MeshInstance3D
+var emergency_lights_enabled := true
 var touch_move := Vector2.ZERO
 var touch_run := false
 var look_touch_id := -1
@@ -99,15 +102,19 @@ func _create_startup_fallback() -> CanvasLayer:
 	return layer
 
 func _process(delta: float) -> void:
+	light_timer += delta
+	if light_timer >= 0.28:
+		light_timer = 0.0
+		lights_red = not lights_red
+		if is_instance_valid(red_light):
+			red_light.color = Color(1.0, 0.02, 0.02) if lights_red else Color(0.22, 0.0, 0.0)
+		if is_instance_valid(blue_light):
+			blue_light.color = Color(0.02, 0.2, 1.0) if not lights_red else Color(0.0, 0.03, 0.22)
+		if is_instance_valid(patrol_red_light):
+			patrol_red_light.visible = emergency_lights_enabled and lights_red
+		if is_instance_valid(patrol_blue_light):
+			patrol_blue_light.visible = emergency_lights_enabled and not lights_red
 	if not game_active:
-		light_timer += delta
-		if light_timer >= 0.3:
-			light_timer = 0.0
-			lights_red = not lights_red
-			if is_instance_valid(red_light):
-				red_light.color = Color(1.0, 0.02, 0.02) if lights_red else Color(0.22, 0.0, 0.0)
-			if is_instance_valid(blue_light):
-				blue_light.color = Color(0.02, 0.2, 1.0) if not lights_red else Color(0.0, 0.03, 0.22)
 		return
 	_update_npcs(delta)
 	_update_remote_network(delta)
@@ -682,8 +689,8 @@ func _add_person_capsule(parent: Node3D, pos: Vector3, radius: float, height: fl
 	mesh_node.rotation_degrees = angles
 	parent.add_child(mesh_node)
 
-func _add_person_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> void:
-	# Se conserva para detalles de vehículos; los personajes usan cápsulas.
+func _add_person_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
+	# Lightweight box detail used by generated vehicle models.
 	var m := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
 	mesh.size = size
@@ -693,6 +700,7 @@ func _add_person_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) 
 	m.material_override = material
 	m.position = pos
 	parent.add_child(m)
+	return m
 
 func _sphere_child(parent: Node3D, pos: Vector3, radius: float, color: Color) -> void:
 	var m := MeshInstance3D.new()
@@ -769,9 +777,9 @@ func _create_vehicle() -> void:
 		_add_person_box(vehicle, Vector3(0.55, 0.08, 0.36), Vector3(x * 0.55, 1.48, -0.05), Color(0.025, 0.03, 0.035))
 	_add_person_box(vehicle, Vector3(1.35, 0.42, 0.08), Vector3(0, 1.25, -1.08), Color(0.12, 0.22, 0.29))
 	_add_person_box(vehicle, Vector3(1.35, 0.4, 0.08), Vector3(0, 1.25, 0.98), Color(0.12, 0.22, 0.29))
-	_add_person_box(vehicle, Vector3(0.42, 0.17, 0.34), Vector3(-0.48, 1.52, -0.05), Color(0.95, 0.025, 0.025))
+	patrol_red_light = _add_person_box(vehicle, Vector3(0.42, 0.17, 0.34), Vector3(-0.48, 1.52, -0.05), Color(0.95, 0.025, 0.025))
 	_add_person_box(vehicle, Vector3(0.42, 0.17, 0.34), Vector3(0.0, 1.52, -0.05), Color(0.94, 0.94, 0.88))
-	_add_person_box(vehicle, Vector3(0.42, 0.17, 0.34), Vector3(0.48, 1.52, -0.05), Color(0.025, 0.12, 0.98))
+	patrol_blue_light = _add_person_box(vehicle, Vector3(0.42, 0.17, 0.34), Vector3(0.48, 1.52, -0.05), Color(0.025, 0.12, 0.98))
 	_add_person_box(vehicle, Vector3(0.42, 0.12, 0.34), Vector3(0, 1.54, -0.05), Color(0.025, 0.035, 0.045))
 
 
@@ -921,6 +929,7 @@ func _create_hud() -> void:
 	_touch_button("▶", Vector2(168, -88), Vector2(66, 60), func(): touch_move.x = 1.0, func(): touch_move.x = 0.0)
 	_touch_button("CORRER", Vector2(-150, -100), Vector2(120, 54), func(): touch_run = true, func(): touch_run = false, true)
 	_touch_button("USAR / BAJAR", Vector2(-150, -38), Vector2(120, 54), func(): pass, Callable(), true)
+	_touch_button("LUCES", Vector2(-150, -162), Vector2(120, 50), func(): pass, Callable(), true)
 
 func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size: Vector2, on_down: Callable, on_up: Callable, right_side := false) -> void:
 	var b := Button.new()
@@ -947,6 +956,17 @@ func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size
 		b.button_up.connect(on_up)
 	if label_text == "USAR / BAJAR":
 		b.pressed.connect(_interact_vehicle)
+	elif label_text == "LUCES":
+		b.pressed.connect(_toggle_emergency_lights)
+
+func _toggle_emergency_lights() -> void:
+	emergency_lights_enabled = not emergency_lights_enabled
+	if is_instance_valid(patrol_red_light):
+		patrol_red_light.visible = emergency_lights_enabled and lights_red
+	if is_instance_valid(patrol_blue_light):
+		patrol_blue_light.visible = emergency_lights_enabled and not lights_red
+	if is_instance_valid(status_label):
+		status_label.text = "LUCES DE EMERGENCIA: " + ("ACTIVADAS" if emergency_lights_enabled else "DESACTIVADAS")
 
 func _interact_vehicle() -> void:
 	if not game_active or not is_instance_valid(player) or not is_instance_valid(vehicle):
@@ -1029,10 +1049,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not driving:
 		_rotate_camera(event.relative)
 	if event is InputEventScreenTouch:
-		if event.pressed:
+		if event.pressed and event.position.x >= get_viewport().get_visible_rect().size.x * 0.45:
 			look_touch_id = event.index
 			last_touch_position = event.position
-		elif event.index == look_touch_id:
+		elif not event.pressed and event.index == look_touch_id:
 			look_touch_id = -1
 	if event is InputEventScreenDrag and event.index == look_touch_id and not driving:
 		_rotate_camera(event.relative)
@@ -1040,7 +1060,10 @@ func _unhandled_input(event: InputEvent) -> void:
 func _rotate_camera(relative_motion: Vector2) -> void:
 	if not is_instance_valid(player) or not is_instance_valid(camera_pivot):
 		return
-	player.rotate_y(-relative_motion.x * mouse_sensitivity)
+	if driving and is_instance_valid(vehicle):
+		vehicle.rotate_y(-relative_motion.x * mouse_sensitivity * 0.75)
+	else:
+		player.rotate_y(-relative_motion.x * mouse_sensitivity)
 	var vertical := 1.0 if invert_camera else -1.0
 	camera_pivot.rotate_x(relative_motion.y * mouse_sensitivity * vertical)
 	camera_pivot.rotation.x = clampf(camera_pivot.rotation.x, deg_to_rad(-60), deg_to_rad(45))
