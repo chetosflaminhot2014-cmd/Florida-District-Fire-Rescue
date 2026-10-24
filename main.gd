@@ -827,72 +827,36 @@ func _sphere_child(parent: Node3D, pos: Vector3, radius: float, color: Color) ->
 	parent.add_child(m)
 
 func _create_vehicle() -> void:
-	# Procedural Crown Victoria-inspired patrol sedan. All geometry is generated locally.
+	# Única patrulla jugable: modelo GLB aportado al proyecto.
 	vehicle = CharacterBody3D.new()
-	vehicle.name = "PatrolCar_CrownVictoria"
+	vehicle.name = "PatrolCar_LAPD_Model"
 	vehicle.position = Vector3(-20, 0.35, 3)
+	vehicle.floor_snap_length = 0.2
 	game_world.add_child(vehicle)
+
+	# La colisión independiente mantiene conducción y choques aunque el modelo sea solo visual.
 	var shape_node := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(2.0, 1.25, 4.5)
 	shape_node.shape = shape
 	shape_node.position.y = 0.68
 	vehicle.add_child(shape_node)
-	_add_person_box(vehicle, Vector3(1.98, 0.62, 4.35), Vector3(0, 0.58, 0), Color(0.88, 0.89, 0.87))
-	_add_person_box(vehicle, Vector3(1.68, 0.66, 2.12), Vector3(0, 1.13, -0.05), Color(0.035, 0.065, 0.09))
-	# Hood, trunk, bumpers and grille give the long-body American patrol-sedan silhouette.
-	_add_person_box(vehicle, Vector3(1.82, 0.12, 1.08), Vector3(0, 0.91, -1.48), Color(0.92, 0.92, 0.89))
-	_add_person_box(vehicle, Vector3(1.78, 0.12, 0.78), Vector3(0, 0.91, 1.62), Color(0.92, 0.92, 0.89))
-	_add_person_box(vehicle, Vector3(1.95, 0.18, 0.18), Vector3(0, 0.38, -2.22), Color(0.12, 0.14, 0.16))
-	_add_person_box(vehicle, Vector3(1.95, 0.18, 0.18), Vector3(0, 0.38, 2.22), Color(0.12, 0.14, 0.16))
-	_add_person_box(vehicle, Vector3(0.9, 0.32, 0.08), Vector3(0, 0.61, -2.23), Color(0.08, 0.09, 0.1))
-	_add_person_box(vehicle, Vector3(0.36, 0.22, 0.08), Vector3(-0.68, 0.73, -2.23), Color(1.0, 0.88, 0.58))
-	_add_person_box(vehicle, Vector3(0.36, 0.22, 0.08), Vector3(0.68, 0.73, -2.23), Color(1.0, 0.88, 0.58))
-	for side in [-1.0, 1.0]:
-		_add_person_box(vehicle, Vector3(0.045, 0.34, 1.85), Vector3(side * 1.01, 0.73, 0.12), Color(0.035, 0.12, 0.24))
-		_add_person_box(vehicle, Vector3(0.05, 0.13, 1.7), Vector3(side * 1.035, 0.96, 0.12), Color(0.9, 0.9, 0.86))
-		_add_person_box(vehicle, Vector3(0.12, 0.12, 0.25), Vector3(side * 1.08, 1.0, -0.78), Color(0.08, 0.09, 0.1))
-		_add_person_box(vehicle, Vector3(0.07, 0.13, 0.48), Vector3(side * 1.04, 1.31, -0.05), Color(0.035, 0.045, 0.055))
-	# Four rubber tyres with visible rims; cylinder axes are rotated to match the wheel hubs.
-	for x in [-1.02, 1.02]:
-		for z in [-1.42, 1.42]:
-			var tyre := MeshInstance3D.new()
-			tyre.name = "PatrolTyre"
-			var tyre_mesh := CylinderMesh.new()
-			tyre_mesh.top_radius = 0.34
-			tyre_mesh.bottom_radius = 0.34
-			tyre_mesh.height = 0.22
-			tyre.mesh = tyre_mesh
-			tyre.rotation_degrees.z = 90
-			tyre.position = Vector3(x, 0.36, z)
-			var tyre_mat := StandardMaterial3D.new()
-			tyre_mat.albedo_color = Color(0.035, 0.04, 0.045)
-			tyre_mat.roughness = 0.96
-			tyre.material_override = tyre_mat
-			vehicle.add_child(tyre)
-			var rim := MeshInstance3D.new()
-			var rim_mesh := CylinderMesh.new()
-			rim_mesh.top_radius = 0.17
-			rim_mesh.bottom_radius = 0.17
-			rim_mesh.height = 0.235
-			rim.mesh = rim_mesh
-			rim.rotation_degrees.z = 90
-			rim.position = Vector3(x * 1.015, 0.36, z)
-			var rim_mat := StandardMaterial3D.new()
-			rim_mat.albedo_color = Color(0.48, 0.51, 0.54)
-			rim_mat.metallic = 0.55
-			rim.material_override = rim_mat
-			vehicle.add_child(rim)
-	# Rear lamps, mirrors, windshields and roof lightbar.
-	for x in [-0.68, 0.68]:
-		_add_person_box(vehicle, Vector3(0.3, 0.22, 0.08), Vector3(x, 0.72, 2.2), Color(0.72, 0.035, 0.025))
-		_add_person_box(vehicle, Vector3(0.55, 0.08, 0.36), Vector3(x * 0.55, 1.48, -0.05), Color(0.025, 0.03, 0.035))
-	_add_person_box(vehicle, Vector3(1.35, 0.42, 0.08), Vector3(0, 1.25, -1.08), Color(0.12, 0.22, 0.29))
-	_add_person_box(vehicle, Vector3(1.35, 0.4, 0.08), Vector3(0, 1.25, 0.98), Color(0.12, 0.22, 0.29))
-	patrol_red_light = _add_person_box(vehicle, Vector3(0.42, 0.17, 0.34), Vector3(-0.48, 1.52, -0.05), Color(0.95, 0.025, 0.025))
-	_add_person_box(vehicle, Vector3(0.42, 0.17, 0.34), Vector3(0.0, 1.52, -0.05), Color(0.94, 0.94, 0.88))
-	patrol_blue_light = _add_person_box(vehicle, Vector3(0.42, 0.17, 0.34), Vector3(0.48, 1.52, -0.05), Color(0.025, 0.12, 0.98))
-	_add_person_box(vehicle, Vector3(0.42, 0.12, 0.34), Vector3(0, 1.54, -0.05), Color(0.025, 0.035, 0.045))
+
+	var patrol_scene := load("res://los_angeles_police_department_car.glb") as PackedScene
+	if patrol_scene != null:
+		var patrol_visual := patrol_scene.instantiate()
+		patrol_visual.name = "PatrolCarModel"
+		if patrol_visual is Node3D:
+			patrol_visual.position = Vector3.ZERO
+			patrol_visual.scale = Vector3.ONE
+		vehicle.add_child(patrol_visual)
+	else:
+		push_error("No se pudo cargar res://los_angeles_police_department_car.glb")
+
+	# Luces de emergencia funcionales sobre el techo, independientes del modelo.
+	patrol_red_light = _add_person_box(vehicle, Vector3(0.32, 0.13, 0.22), Vector3(-0.34, 1.52, -0.05), Color(0.95, 0.025, 0.025))
+	_add_person_box(vehicle, Vector3(0.24, 0.13, 0.22), Vector3(0.0, 1.52, -0.05), Color(0.94, 0.94, 0.88))
+	patrol_blue_light = _add_person_box(vehicle, Vector3(0.32, 0.13, 0.22), Vector3(0.34, 1.52, -0.05), Color(0.025, 0.12, 0.98))
 
 
 func _create_service_vehicles() -> void:
