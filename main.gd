@@ -15,6 +15,10 @@ var camera_pivot: Node3D
 var camera: Camera3D
 var vehicle: CharacterBody3D
 var player_visual: Node3D
+var weapon_holder: Node3D
+var equipped_weapon: String = "RIFLE"
+var equipped_weapon_instance: Node3D
+const WEAPON_SCENES := {"ESCOPETA": "res://remington_870_shotgun.glb", "RIFLE": "res://lr-300_ml-a_assault_rifle.glb"}
 var hud_layer: CanvasLayer
 var status_label: Label
 var game_active := false
@@ -631,6 +635,30 @@ func _sphere(node_name: String, pos: Vector3, radius: float, color: Color) -> Me
 	game_world.add_child(node)
 	return node
 
+func _equip_weapon(weapon_name: String) -> void:
+	if not WEAPON_SCENES.has(weapon_name):
+		return
+	if not is_instance_valid(weapon_holder):
+		return
+	if is_instance_valid(equipped_weapon_instance):
+		equipped_weapon_instance.queue_free()
+		equipped_weapon_instance = null
+	equipped_weapon = weapon_name
+	var weapon_resource: Resource = load(WEAPON_SCENES[weapon_name])
+	if weapon_resource == null or not (weapon_resource is PackedScene):
+		if is_instance_valid(status_label):
+			status_label.text = "No se pudo cargar el modelo: " + weapon_name
+		return
+	equipped_weapon_instance = (weapon_resource as PackedScene).instantiate() as Node3D
+	if equipped_weapon_instance == null:
+		if is_instance_valid(status_label):
+			status_label.text = "El modelo de " + weapon_name + " no contiene un nodo 3D válido"
+		return
+	equipped_weapon_instance.name = weapon_name.capitalize() + "Model"
+	weapon_holder.add_child(equipped_weapon_instance)
+	if is_instance_valid(status_label):
+		status_label.text = "ARMA EQUIPADA: " + weapon_name + " · 1 Escopeta / 2 Rifle"
+
 func _create_player(female: bool) -> void:
 	player = CharacterBody3D.new()
 	player.name = "Player"
@@ -647,6 +675,13 @@ func _create_player(female: bool) -> void:
 	player_visual.name = "PlayerOfficer"
 	player_visual.position.y = 0.0
 	player.add_child(player_visual)
+	weapon_holder = Node3D.new()
+	weapon_holder.name = "WeaponHolder"
+	weapon_holder.position = Vector3(0.34, 1.17, -0.28)
+	weapon_holder.rotation_degrees = Vector3(0, 90, 8)
+	weapon_holder.scale = Vector3(0.28, 0.28, 0.28)
+	player_visual.add_child(weapon_holder)
+	_equip_weapon("RIFLE")
 	camera_pivot = Node3D.new()
 	camera_pivot.position.y = 1.55
 	player.add_child(camera_pivot)
@@ -947,6 +982,8 @@ func _create_hud() -> void:
 	_touch_button("USAR / BAJAR", Vector2(-150, -38), Vector2(120, 54), func(): pass, Callable(), true)
 	_touch_button("LUCES", Vector2(-150, -162), Vector2(120, 50), func(): pass, Callable(), true)
 	_touch_button("FRENO", Vector2(-150, -220), Vector2(120, 50), func(): touch_brake = true, func(): touch_brake = false, true)
+	_touch_button("ESCOPETA", Vector2(-150, -278), Vector2(120, 48), func(): _equip_weapon("ESCOPETA"), Callable(), true)
+	_touch_button("RIFLE", Vector2(-150, -334), Vector2(120, 48), func(): _equip_weapon("RIFLE"), Callable(), true)
 
 func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size: Vector2, on_down: Callable, on_up: Callable, right_side := false) -> void:
 	var b := Button.new()
@@ -1063,6 +1100,10 @@ func _unhandled_input(event: InputEvent) -> void:
 				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		elif event.keycode == KEY_E:
 			_interact_vehicle()
+		elif event.keycode == KEY_1:
+			_equip_weapon("ESCOPETA")
+		elif event.keycode == KEY_2:
+			_equip_weapon("RIFLE")
 	if event is InputEventMouseButton and event.pressed and not OS.has_feature("mobile"):
 		if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
