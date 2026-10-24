@@ -15,6 +15,9 @@ var camera_pivot: Node3D
 var camera: Camera3D
 var vehicle: CharacterBody3D
 var player_visual: Node3D
+var player_animation_player: AnimationPlayer
+var player_animation_names: Array[StringName] = []
+var player_motion_state := ""
 var weapon_holder: Node3D
 var equipped_weapon: String = "RIFLE"
 var equipped_weapon_instance: Node3D
@@ -320,12 +323,16 @@ func _show_character_selection() -> void:
 	_clear_menu()
 	_add_title()
 	var label := Label.new()
-	label.text = "ELIGE A TU OFICIAL"
+	label.text = "PERSONAJE DISPONIBLE"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 19)
 	menu_panel.add_child(label)
-	_add_button("OFICIAL MASCULINO", func(): _start_game(false))
-	_add_button("OFICIAL FEMENINA", func(): _start_game(true))
+	var detail := Label.new()
+	detail.text = "OFICIAL FEMENINA · UNIFORME DE PATRULLA"
+	detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	menu_panel.add_child(detail)
+	_add_button("INICIAR TURNO", func(): _start_game(true))
 	_add_button("VOLVER", _show_main_menu)
 
 func _show_multiplayer_menu() -> void:
@@ -671,10 +678,11 @@ func _create_player(female: bool) -> void:
 	collider.shape = capsule
 	collider.position.y = 0.9
 	player.add_child(collider)
-	player_visual = _make_person(female, true)
+	player_visual = _make_female_player_model()
 	player_visual.name = "PlayerOfficer"
 	player_visual.position.y = 0.0
 	player.add_child(player_visual)
+	_setup_player_animations(player_visual)
 	weapon_holder = Node3D.new()
 	weapon_holder.name = "WeaponHolder"
 	weapon_holder.position = Vector3(0.34, 1.17, -0.28)
@@ -691,6 +699,59 @@ func _create_player(female: bool) -> void:
 	camera.rotation_degrees.x = -10
 	camera.current = true
 	camera_pivot.add_child(camera)
+
+func _make_female_player_model() -> Node3D:
+	var visual := Node3D.new()
+	visual.name = "FemaleOfficerVisual"
+	var model_resource := load("res://police_officer_in_uniform.glb")
+	if model_resource is PackedScene:
+		var model_instance := (model_resource as PackedScene).instantiate()
+		model_instance.name = "FemaleOfficerModel"
+		visual.add_child(model_instance)
+	else:
+		# Keep a visible fallback if the uploaded model cannot be imported.
+		visual.add_child(_make_person(true, true, "sheriff"))
+	return visual
+
+func _setup_player_animations(root: Node) -> void:
+	player_animation_player = _find_animation_player(root)
+	player_animation_names.clear()
+	player_motion_state = ""
+	if not is_instance_valid(player_animation_player):
+		return
+	for animation_name in player_animation_player.get_animation_list():
+		player_animation_names.append(StringName(animation_name))
+	_play_player_animation("idle")
+
+func _find_animation_player(node: Node) -> AnimationPlayer:
+	if node is AnimationPlayer:
+		return node as AnimationPlayer
+	for child in node.get_children():
+		var found := _find_animation_player(child)
+		if is_instance_valid(found):
+			return found
+	return null
+
+func _play_player_animation(state: String) -> void:
+	if not is_instance_valid(player_animation_player) or player_animation_names.is_empty() or player_motion_state == state:
+		return
+	var preferred: Array[String] = []
+	if state == "run":
+		preferred = ["run", "sprint", "jog", "walk"]
+	elif state == "walk":
+		preferred = ["walk", "move", "run", "jog"]
+	else:
+		preferred = ["idle", "stand", "breath", "rest"]
+	for keyword in preferred:
+		for animation_name in player_animation_names:
+			if String(animation_name).to_lower().contains(keyword):
+				player_animation_player.play(String(animation_name))
+				player_motion_state = state
+				return
+	# If the file contains only a differently named clip, use its first animation.
+	if state == "idle" and not player_animation_names.is_empty():
+		player_animation_player.play(String(player_animation_names[0]))
+		player_motion_state = state
 
 func _make_person(female: bool, police: bool, role: String = "civilian") -> Node3D:
 	var person := Node3D.new()
@@ -1088,6 +1149,13 @@ func _physics_process(delta: float) -> void:
 	player.move_and_slide()
 	player.position.x = clampf(player.position.x, -WORLD_LIMIT, WORLD_LIMIT)
 	player.position.z = clampf(player.position.z, -WORLD_LIMIT, WORLD_LIMIT)
+	var planar_speed := Vector2(player.velocity.x, player.velocity.z).length()
+	if planar_speed < 0.2:
+		_play_player_animation("idle")
+	elif speed > WALK_SPEED:
+		_play_player_animation("run")
+	else:
+		_play_player_animation("walk")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not game_active:
