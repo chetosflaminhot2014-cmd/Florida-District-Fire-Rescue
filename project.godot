@@ -11,6 +11,9 @@ config_version=5
 [application]
 
 config/name="Police Officer Simulator"
+
+[autoload]
+MultiplayerLobby="*res://multiplayer_lobby.gd"
 run/main_scene="uid://boj5fvl4kghed"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
