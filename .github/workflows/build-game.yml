@@ -9,6 +9,8 @@ on:
       - "main.tscn"
       - "project.godot"
       - "export_presets.cfg"
+      - "*.glb"
+      - "models/**"
       - ".github/workflows/build-game.yml"
 
 permissions:
