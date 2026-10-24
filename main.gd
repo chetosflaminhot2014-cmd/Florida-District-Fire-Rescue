@@ -39,6 +39,12 @@ class MinimapControl extends Control:
 const WORLD_LIMIT := 92.0
 const WALK_SPEED := 5.0
 const RUN_SPEED := 8.0
+const PATROL_MAX_FORWARD_SPEED := 27.0 # m/s; about 97 km/h
+const PATROL_MAX_REVERSE_SPEED := 7.0 # m/s; controlled reverse for parking
+const PATROL_ACCELERATION := 6.5
+const PATROL_BRAKING := 16.0
+const PATROL_COAST_DECELERATION := 2.0
+const PATROL_STEERING_CURVATURE := 0.055
 const FLORIDA_BUILDING_SCENES := [
 	"res://assets/florida_city/building-type-a.glb",
 	"res://assets/florida_city/building-type-b.glb",
@@ -76,6 +82,7 @@ var invert_camera := false
 var mouse_sensitivity := 0.002
 var move_speed := WALK_SPEED
 var vehicle_speed := 0.0
+var vehicle_steering := 0.0
 var light_timer := 0.0
 var lights_red := true
 var red_light: ColorRect
@@ -184,7 +191,12 @@ func _process(delta: float) -> void:
 		minimap.target_active = dispatch_target_active
 		minimap.queue_redraw()
 	if is_instance_valid(status_label):
-		status_label.text = ("PATRULLA — WASD / controles táctiles" if driving else "AGENTE A PIE — WASD · E para subir/bajar") + "   |   NPC: " + str(npc_nodes.size())
+		if driving:
+			var speed_kmh := roundi(absf(vehicle_speed) * 3.6)
+			var gear := "R" if vehicle_speed < -0.2 else "D"
+			status_label.text = "PATRULLA · %d km/h · %s · LUCES %s" % [speed_kmh, gear, "ON" if emergency_lights_enabled else "OFF"]
+		else:
+			status_label.text = "AGENTE A PIE · WASD · E PARA SUBIR/BAJAR · NPC: " + str(npc_nodes.size())
 
 func _create_menu() -> void:
 	menu_layer = CanvasLayer.new()
@@ -1268,20 +1280,28 @@ func _physics_process(delta: float) -> void:
 	if driving:
 		var throttle := -input_dir.y
 		var steer := input_dir.x
-		# Aceleración y frenado progresivos; el coche no cambia de velocidad instantáneamente.
-		var target_speed := throttle * 16.0
 		var braking := Input.is_key_pressed(KEY_SPACE) or touch_brake
+		# Speed changes smoothly. Reversing is deliberately slower than forward driving.
 		if braking:
-			target_speed = 0.0
-		var acceleration := 18.0 if braking else (9.0 if absf(throttle) > 0.01 else 5.0)
-		vehicle_speed = move_toward(vehicle_speed, target_speed, acceleration * delta)
-		if absf(vehicle_speed) > 0.25:
-			var steering_factor := clampf(absf(vehicle_speed) / 5.0, 0.25, 1.0)
-			vehicle.rotate_y(-steer * delta * 1.35 * steering_factor * signf(vehicle_speed))
+			vehicle_speed = move_toward(vehicle_speed, 0.0, PATROL_BRAKING * delta)
+		elif absf(throttle) > 0.01:
+			var target_speed := PATROL_MAX_FORWARD_SPEED if throttle > 0.0 else -PATROL_MAX_REVERSE_SPEED
+			target_speed *= absf(throttle)
+			var changing_direction := absf(vehicle_speed) > 0.5 and signf(vehicle_speed) != signf(target_speed)
+			var acceleration := PATROL_BRAKING if changing_direction else PATROL_ACCELERATION
+			vehicle_speed = move_toward(vehicle_speed, target_speed, acceleration * delta)
+		else:
+			# Engine drag gradually slows the patrol car when the accelerator is released.
+			vehicle_speed = move_toward(vehicle_speed, 0.0, PATROL_COAST_DECELERATION * delta)
+		# Smooth steering prevents abrupt keyboard/touch direction changes.
+		vehicle_steering = move_toward(vehicle_steering, steer, 3.8 * delta)
+		if absf(vehicle_speed) > 0.05 and absf(vehicle_steering) > 0.01:
+			var yaw_rate := vehicle_steering * PATROL_STEERING_CURVATURE * vehicle_speed
+			vehicle.rotate_y(-yaw_rate * delta)
 		var forward := -vehicle.global_transform.basis.z
 		vehicle.velocity.x = forward.x * vehicle_speed
 		vehicle.velocity.z = forward.z * vehicle_speed
-		vehicle.velocity.y = 0
+		vehicle.velocity.y = 0.0
 		vehicle.move_and_slide()
 		vehicle.position.x = clampf(vehicle.position.x, -WORLD_LIMIT, WORLD_LIMIT)
 		vehicle.position.z = clampf(vehicle.position.z, -WORLD_LIMIT, WORLD_LIMIT)
@@ -1343,7 +1363,8 @@ func _rotate_camera(relative_motion: Vector2) -> void:
 	if not is_instance_valid(player) or not is_instance_valid(camera_pivot):
 		return
 	if driving and is_instance_valid(vehicle):
-		vehicle.rotate_y(-relative_motion.x * mouse_sensitivity * 0.75)
+		# Mouse/touch drag orbits the driving camera; steering stays on A/D or the touch pad.
+		camera_pivot.rotate_y(-relative_motion.x * mouse_sensitivity)
 	else:
 		player.rotate_y(-relative_motion.x * mouse_sensitivity)
 	var vertical := 1.0 if invert_camera else -1.0
