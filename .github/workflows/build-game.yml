@@ -86,7 +86,8 @@ jobs:
           echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/28.1.13356709" >> "$GITHUB_ENV"
           printf '[gd_resource type="EditorSettings" format=3]\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\n' "$ANDROID_HOME" "$JAVA_HOME" > "$HOME/.config/godot/editor_settings-4.tres"
       - name: Import project and check scripts
-        run: "$GODOT_BIN" --headless --editor --path . --quit
+        run: |
+          "$GODOT_BIN" --headless --editor --path . --quit
       - name: Export Android APK
         run: |
           mkdir -p build
