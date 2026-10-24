@@ -1,0 +1,2 @@
+Vehicle GLB sizes in the source mirror: police 195336 B; ambulance 233612 B; firetruck 232448 B; sedan 172216 B; suv 207572 B.
+Personnel model sizes from the source pages: police officer 16.0 MB; firefighter 19.5 MB; paramedic 14.5 MB.
