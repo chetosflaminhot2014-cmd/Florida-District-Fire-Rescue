@@ -543,31 +543,25 @@ func _create_player(female: bool) -> void:
 	camera_pivot.add_child(camera)
 
 func _make_person(female: bool, police: bool, role: String = "civilian") -> Node3D:
-	# Personajes 3D estilizados con cápsulas y esferas, sin cuerpos hechos de cubos.
 	var person := Node3D.new()
-	var uniform := Color(0.07, 0.12, 0.23) if police else Color(rng.randf_range(0.25,0.85), rng.randf_range(0.25,0.8), rng.randf_range(0.25,0.8))
-	if role == "ems": uniform = Color(0.04, 0.38, 0.42)
-	elif role == "fire": uniform = Color(0.62, 0.08, 0.06)
-	elif role == "sheriff": uniform = Color(0.42, 0.32, 0.12)
-	var skin := Color(0.72, 0.53, 0.4)
-	var pants := Color(0.045, 0.065, 0.1) if police or role == "sheriff" else Color(0.12, 0.13, 0.16)
-	_add_person_capsule(person, Vector3(0, 1.08, 0), 0.29, 0.72, uniform)
-	_add_person_capsule(person, Vector3(-0.16, 0.43, 0), 0.105, 0.55, pants)
-	_add_person_capsule(person, Vector3(0.16, 0.43, 0), 0.105, 0.55, pants)
-	_add_person_capsule(person, Vector3(-0.39, 1.04, 0), 0.095, 0.55, uniform, Vector3(0, 0, -10))
-	_add_person_capsule(person, Vector3(0.39, 1.04, 0), 0.095, 0.55, uniform, Vector3(0, 0, 10))
-	_add_person_capsule(person, Vector3(-0.16, 0.12, -0.015), 0.105, 0.22, Color(0.025, 0.03, 0.04))
-	_add_person_capsule(person, Vector3(0.16, 0.12, -0.015), 0.105, 0.22, Color(0.025, 0.03, 0.04))
-	_sphere_child(person, Vector3(0, 1.64, 0), 0.22, skin)
-	_add_person_capsule(person, Vector3(0, 1.43, 0), 0.09, 0.12, skin)
+	var model_path := "res://models/civilian.obj"
 	if police or role == "sheriff":
-		_add_person_capsule(person, Vector3(0, 1.84, 0), 0.23, 0.09, Color(0.045, 0.065, 0.1))
-		_add_person_capsule(person, Vector3(0, 1.77, 0), 0.24, 0.035, Color(0.8, 0.65, 0.2))
-		_sphere_child(person, Vector3(0.12, 1.1, -0.245), 0.055, Color(0.9, 0.72, 0.18))
+		model_path = "res://models/officer.obj"
 	elif role == "fire":
-		_add_person_capsule(person, Vector3(0, 1.82, 0), 0.23, 0.08, Color(0.88, 0.48, 0.08))
+		model_path = "res://models/fire.obj"
 	elif role == "ems":
-		_add_person_capsule(person, Vector3(0, 1.82, 0), 0.22, 0.07, Color(0.8, 0.85, 0.86))
+		model_path = "res://models/ems.obj"
+	var model_mesh := load(model_path) as Mesh
+	if model_mesh != null:
+		var model := MeshInstance3D.new()
+		model.name = "CustomCharacterModel"
+		model.mesh = model_mesh
+		model.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		person.add_child(model)
+	else:
+		# Fallback only if a model asset cannot be imported.
+		_add_person_capsule(person, Vector3(0, 1.08, 0), 0.29, 0.72, Color(0.07, 0.12, 0.23))
+		_sphere_child(person, Vector3(0, 1.64, 0), 0.22, Color(0.72, 0.53, 0.4))
 	return person
 
 func _add_person_capsule(parent: Node3D, pos: Vector3, radius: float, height: float, color: Color, angles := Vector3.ZERO) -> void:
