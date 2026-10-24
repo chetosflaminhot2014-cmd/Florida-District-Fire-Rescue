@@ -57,7 +57,7 @@ jobs:
           curl -L --fail --retry 3 "https://www.innerscene.com/api/library/police-officer-standing-3d-person-emergency-services-9fd93114/download" -o "$ROLE_DIR/police-officer.glb"
           curl -L --fail --retry 3 "https://www.innerscene.com/api/library/firefighter-standing-3d-person-emergency-services-3c007c1f/download" -o "$ROLE_DIR/firefighter.glb"
           curl -L --fail --retry 3 "https://www.innerscene.com/api/library/drew-3d-person-paramedic-with-response-bag-c90b16a3/download" -o "$ROLE_DIR/paramedic.glb"
-          curl -L --fail --retry 3 "https://www.innerscene.com/api/library/low-poly-character-casual-male-t-pose-rigged-2de535f3/download" -o "$ROLE_DIR/civilian-male.glb"
+          curl -L --fail --retry 3 "https://www.innerscene.com/api/library/low-poly-character-worker-male-carrying-static-8a160412/download" -o "$ROLE_DIR/civilian-male.glb"
           curl -L --fail --retry 3 "https://www.innerscene.com/api/library/low-poly-character-casual-female-walking-static-befaef7b/download" -o "$ROLE_DIR/civilian-female.glb"
           cat > "$ROLE_DIR/ASSET_LICENSES.md" <<'EOF'
           # Emergency vehicles and personnel — Asset Record
@@ -73,21 +73,21 @@ jobs:
           - police-officer.glb: Innerscene, 16.0 MB, static mesh, approx. 123k triangles.
           - firefighter.glb: Innerscene, 19.5 MB, static mesh, approx. 91k triangles.
           - paramedic.glb: Innerscene, 14.5 MB, static mesh.
-          - civilian-male.glb: Innerscene, 123 KB, low-poly casual male, rigged T-pose.
+          - civilian-male.glb: Innerscene, 123 KB, low-poly male pedestrian in a natural carrying pose.
           - civilian-female.glb: Innerscene, 82 KB, low-poly casual female in a walking pose.
           - License: CC0 public domain, as stated on each model's source page.
           - Sources:
             - https://www.innerscene.com/tools/library/3d-parts/police-officer-standing-3d-person-emergency-services-9fd93114
             - https://www.innerscene.com/tools/library/3d-parts/firefighter-standing-3d-person-emergency-services-3c007c1f
             - https://www.innerscene.com/tools/library/3d-parts/drew-3d-person-paramedic-with-response-bag-c90b16a3
-            - https://www.innerscene.com/tools/library/3d-parts/low-poly-character-casual-male-t-pose-rigged-2de535f3
+            - https://www.innerscene.com/tools/library/3d-parts/low-poly-character-worker-male-carrying-static-8a160412
             - https://www.innerscene.com/tools/library/3d-parts/low-poly-character-casual-female-walking-static-befaef7b
           - Police, firefighter and paramedic GLBs are detailed static meshes; they do not include walk animations.
           - Civilian GLBs are lightweight and are selected per NPC; models/officer.obj remains the existing sheriff-specific 3D mesh because a suitable free CC0 sheriff-uniform GLB was not verified.
           EOF
           cat > "$ROLE_DIR/ASSET_SIZES.txt" <<'EOF'
           Vehicle GLB sizes in the source mirror: police 195336 B; ambulance 233612 B; firetruck 232448 B; sedan 172216 B; suv 207572 B.
-          Personnel model sizes from the source pages: police officer 16.0 MB; firefighter 19.5 MB; paramedic 14.5 MB; civilian male 123 KB; civilian female 82 KB.
+          Personnel model sizes from the source pages: police officer 16.0 MB; firefighter 19.5 MB; paramedic 14.5 MB; civilian male 104 KB; civilian female 82 KB.
           EOF
       - name: Commit downloaded assets into the repository
         shell: bash
