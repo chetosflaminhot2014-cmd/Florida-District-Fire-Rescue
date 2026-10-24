@@ -491,7 +491,7 @@ func _show_credits() -> void:
 	_clear_menu()
 	_add_title()
 	var credits := Label.new()
-	credits.text = "POLICE OFFICER SIMULATOR\n\nCiudad ficticia de Mirage Hills\nProyecto independiente en Godot 4"
+	credits.text = "FIRE DEPARTMENT SIMULATOR\n\nCiudad ficticia de Mirage Hills\nSimulador de bomberos y rescate en Godot 4"
 	credits.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	credits.add_theme_font_size_override("font_size", 14)
 	menu_panel.add_child(credits)
@@ -556,6 +556,28 @@ func _create_world() -> void:
 	_create_trees()
 	_create_street_furniture()
 	_create_crosswalks()
+	_create_district_markers()
+
+
+func _create_district_markers() -> void:
+	var districts := [
+		{"name": "DOWNTOWN", "position": Vector3(-30, 8, -30), "color": Color(0.25, 0.72, 1.0)},
+		{"name": "NORTH RESIDENTIAL", "position": Vector3(15, 8, -150), "color": Color(0.75, 0.9, 1.0)},
+		{"name": "EAST INDUSTRIAL", "position": Vector3(150, 8, 15), "color": Color(1.0, 0.68, 0.28)},
+		{"name": "CIVIC DISTRICT", "position": Vector3(-150, 8, 75), "color": Color(0.55, 0.95, 0.76)},
+		{"name": "SOUTH GARDENS", "position": Vector3(15, 8, 150), "color": Color(0.65, 0.9, 0.58)}
+	]
+	for district in districts:
+		var sign := Label3D.new()
+		sign.name = str(district["name"]).replace(" ", "_")
+		sign.text = str(district["name"])
+		sign.position = district["position"]
+		sign.font_size = 48
+		sign.outline_size = 8
+		sign.modulate = district["color"]
+		sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		sign.no_depth_test = false
+		game_world.add_child(sign)
 
 func _create_fire_station() -> void:
 	_box("FireStation", Vector3(17, 6, 11), Vector3(60, 3, 115), Color(0.48, 0.12, 0.09), true)
@@ -824,19 +846,12 @@ func _create_player(female: bool) -> void:
 	collider.position.y = 0.9
 	player.add_child(collider)
 	# Use the male officer OBJ already included in the project; the previous GLB pivot clipped the character.
-	player_visual = _make_person(false, true, "sheriff")
-	player_visual.name = "PlayerOfficer_Male"
+	player_visual = _make_person(false, false, "fire")
+	player_visual.name = "PlayerFirefighter"
 	player_visual.scale = Vector3(0.86, 0.86, 0.86)
 	player_visual.position.y = 0.0
 	player.add_child(player_visual)
 	_setup_player_animations(player_visual)
-	weapon_holder = Node3D.new()
-	weapon_holder.name = "WeaponHolder"
-	weapon_holder.position = Vector3(0.34, 1.17, -0.28)
-	weapon_holder.rotation_degrees = Vector3(0, 90, 8)
-	weapon_holder.scale = Vector3(0.28, 0.28, 0.28)
-	player_visual.add_child(weapon_holder)
-	_equip_weapon("RIFLE")
 	camera_pivot = Node3D.new()
 	camera_pivot.position.y = 1.55
 	player.add_child(camera_pivot)
@@ -1082,10 +1097,10 @@ func _create_npcs(count: int) -> void:
 	for i in range(count):
 		var npc := Node3D.new()
 		var role := "civilian"
-		if i == 0 or i == 1: role = "sheriff"
+		if i == 0 or i == 1: role = "fire"
 		elif i == 2 or i == 3: role = "ems"
 		elif i == 4 or i == 5: role = "fire"
-		elif i == 6 or i == 7: role = "police"
+		elif i == 6 or i == 7: role = "civilian"
 		npc.name = role.to_upper() + "_NPC_%02d" % i
 		var x := rng.randf_range(-200, 200)
 		var z := rng.randf_range(-200, 200)
@@ -1248,7 +1263,7 @@ func _create_remote_player(peer_id: int) -> void:
 		return
 	var remote := Node3D.new()
 	remote.name = "RemoteOfficer_%d" % peer_id
-	remote.add_child(_make_person(false, true, "sheriff"))
+	remote.add_child(_make_person(false, false, "fire"))
 	game_world.add_child(remote)
 	remote_players[peer_id] = remote
 	remote.position = Vector3(0, 0.1, 0)
@@ -1459,10 +1474,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			_interact_vehicle()
 		elif event.keycode == KEY_F:
 			_toggle_extinguishing()
-		elif event.keycode == KEY_1:
-			_equip_weapon("ESCOPETA")
-		elif event.keycode == KEY_2:
-			_equip_weapon("RIFLE")
 	if event is InputEventMouseButton and event.pressed and not OS.has_feature("mobile"):
 		if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -1495,7 +1506,7 @@ func _toggle_pause_menu() -> void:
 	get_tree().paused = not get_tree().paused
 	var popup := AcceptDialog.new()
 	popup.process_mode = Node.PROCESS_MODE_ALWAYS
-	popup.title = "Police Officer Simulator"
+	popup.title = "Fire Department Simulator"
 	popup.dialog_text = "Fire Department Simulator pausado. Pulsa PAUSA para continuar."
 	add_child(popup)
 	popup.popup_centered()
