@@ -4,6 +4,10 @@ A lightweight Godot 4 project for Windows PC and Android, set in the fictional M
 
 ## Current playable prototype
 
+- Procedural role-based NPCs: civilians, sheriff/police, EMS and firefighters.
+- A fictional 911 call and department radio panel, with incident acceptance and a location marker.
+- Multiplayer foundation: host/join menu, up to 8 peers, player-position synchronization and shared dispatch messages. Initial testing is intended for LAN; internet hosting requires reachable UDP port 7000 or a dedicated server.
+
 - Main menu, character selection, settings and credits.
 - Procedurally generated city blocks, a road grid, sidewalks, lane markings, a police station and trees.
 - Third-person officer movement and camera control.
@@ -23,7 +27,7 @@ Open the repository's **Actions** tab and select the latest successful run. Down
 
 ## Important scope note
 
-This is an early playable prototype, not a finished commercial simulator. The repository did not contain the officer `.glb` models mentioned in earlier development, so the current build uses generated placeholder characters and a primitive patrol car. NPCs use lightweight wandering behavior; traffic systems, missions, arrest/citation mechanics, animation, sound, saves and production-quality vehicle physics are not implemented yet.
+This is an early playable prototype, not a finished commercial simulator. The repository did not contain the officer `.glb` models mentioned in earlier development, so the current build uses generated placeholder characters and a primitive patrol car. NPCs use lightweight wandering behavior. The 911/radio loop and multiplayer are an early foundation and still need end-to-end testing on two devices; the prototype does not yet have full emergency response AI, traffic systems, arrest/citation mechanics, imported rigged character animations, sound, saves or production-quality vehicle physics.
 
 ## Engine
 
