@@ -674,6 +674,18 @@ func _make_person(female: bool, police: bool, role: String = "civilian") -> Node
 		# Fallback only if a model asset cannot be imported.
 		_add_person_capsule(person, Vector3(0, 1.08, 0), 0.29, 0.72, Color(0.07, 0.12, 0.23))
 		_sphere_child(person, Vector3(0, 1.64, 0), 0.22, Color(0.72, 0.53, 0.4))
+	# Add visible duty equipment to the imported, unrigged character meshes.
+	if police or role == "sheriff":
+		_add_person_box(person, Vector3(0.56, 0.09, 0.34), Vector3(0, 0.96, 0), Color(0.035, 0.04, 0.045))
+		_add_person_box(person, Vector3(0.09, 0.13, 0.035), Vector3(-0.12, 1.38, -0.19), Color(0.92, 0.72, 0.18))
+		_add_person_box(person, Vector3(0.10, 0.16, 0.08), Vector3(0.22, 1.39, -0.14), Color(0.035, 0.04, 0.05))
+		_add_person_box(person, Vector3(0.32, 0.08, 0.30), Vector3(0, 1.79, 0), Color(0.035, 0.055, 0.09))
+	elif role == "fire":
+		_add_person_box(person, Vector3(0.43, 0.12, 0.36), Vector3(0, 1.78, 0), Color(0.68, 0.07, 0.035))
+		_add_person_box(person, Vector3(0.58, 0.07, 0.35), Vector3(0, 1.03, -0.01), Color(0.9, 0.68, 0.12))
+	elif role == "ems":
+		_add_person_box(person, Vector3(0.58, 0.08, 0.34), Vector3(0, 1.02, -0.01), Color(0.9, 0.78, 0.16))
+		_add_person_box(person, Vector3(0.12, 0.12, 0.04), Vector3(-0.14, 1.38, -0.19), Color(0.92, 0.94, 0.91))
 	return person
 
 func _add_person_capsule(parent: Node3D, pos: Vector3, radius: float, height: float, color: Color, angles := Vector3.ZERO) -> void:
