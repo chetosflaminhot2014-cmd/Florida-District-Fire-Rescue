@@ -36,8 +36,19 @@ jobs:
           chmod +x "$GODOT_BIN"
           echo "GODOT_BIN=$GODOT_BIN" >> "$GITHUB_ENV"
       - name: Import project and check scripts
+        shell: bash
         run: |
-          "$GODOT_BIN" --headless --editor --path . --quit
+          set -euo pipefail
+          "$GODOT_BIN" --headless --editor --path . --quit 2>&1 | tee /tmp/godot-import.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|ERROR: Failed to load script" /tmp/godot-import.log; then
+            echo "Godot reported a script import or parse error."
+            exit 1
+          fi
+          "$GODOT_BIN" --headless --path . --quit-after 5 2>&1 | tee /tmp/godot-startup.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|ERROR: Failed to load script" /tmp/godot-startup.log; then
+            echo "Godot reported a runtime startup script error."
+            exit 1
+          fi
       - name: Export Windows build
         run: |
           mkdir -p build
@@ -86,8 +97,19 @@ jobs:
           echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/28.1.13356709" >> "$GITHUB_ENV"
           printf '[gd_resource type="EditorSettings" format=3]\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\n' "$ANDROID_HOME" "$JAVA_HOME" > "$HOME/.config/godot/editor_settings-4.tres"
       - name: Import project and check scripts
+        shell: bash
         run: |
-          "$GODOT_BIN" --headless --editor --path . --quit
+          set -euo pipefail
+          "$GODOT_BIN" --headless --editor --path . --quit 2>&1 | tee /tmp/godot-import.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|ERROR: Failed to load script" /tmp/godot-import.log; then
+            echo "Godot reported a script import or parse error."
+            exit 1
+          fi
+          "$GODOT_BIN" --headless --path . --quit-after 5 2>&1 | tee /tmp/godot-startup.log
+          if grep -E "SCRIPT ERROR:|Parse Error:|ERROR: Failed to load script" /tmp/godot-startup.log; then
+            echo "Godot reported a runtime startup script error."
+            exit 1
+          fi
       - name: Export Android APK
         run: |
           mkdir -p build
