@@ -43,6 +43,13 @@ var multiplayer_name_input: LineEdit
 
 func _ready() -> void:
 	rng.randomize()
+	# Keep a valid active camera while the menu is shown on Android and desktop.
+	# The gameplay camera replaces this one when the player starts a shift.
+	var menu_camera := Camera3D.new()
+	menu_camera.name = "MenuCamera"
+	menu_camera.position = Vector3(0, 2, 10)
+	menu_camera.current = true
+	add_child(menu_camera)
 	_create_menu()
 	if has_node("/root/MultiplayerLobby"):
 		MultiplayerLobby.peer_joined.connect(_on_peer_joined)
@@ -94,6 +101,7 @@ func _create_menu() -> void:
 	accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu_layer.add_child(accent)
 	var right_panel := PanelContainer.new()
+	right_panel.name = "OperationsPanel"
 	right_panel.anchor_left = 0.49
 	right_panel.anchor_right = 0.95
 	right_panel.anchor_top = 0.15
@@ -142,6 +150,7 @@ func _create_menu() -> void:
 		feature_label.add_theme_color_override("font_color", Color(0.8, 0.87, 0.94))
 		info.add_child(feature_label)
 	var footer := Label.new()
+	footer.name = "MenuFooter"
 	footer.anchor_left = 0.49
 	footer.anchor_right = 0.95
 	footer.anchor_top = 0.88
@@ -152,6 +161,7 @@ func _create_menu() -> void:
 	footer.add_theme_color_override("font_color", Color(0.38, 0.5, 0.62))
 	menu_layer.add_child(footer)
 	var left_area := Control.new()
+	left_area.name = "MenuNavigation"
 	left_area.anchor_left = 0.045
 	left_area.anchor_right = 0.405
 	left_area.anchor_top = 0.06
@@ -165,6 +175,20 @@ func _create_menu() -> void:
 	menu_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	menu_panel.add_theme_constant_override("separation", 11)
 	left_center.add_child(menu_panel)
+	# On phones, use a single-column layout instead of squeezing the desktop split screen.
+	if OS.has_feature("mobile") or get_viewport().get_visible_rect().size.x < 760:
+		right_panel.visible = false
+		upper_glow.visible = false
+		accent.visible = false
+		footer.visible = false
+		left_area.anchor_left = 0.06
+		left_area.anchor_right = 0.94
+		left_area.anchor_top = 0.04
+		left_area.anchor_bottom = 0.96
+		menu_panel.add_theme_constant_override("separation", 8)
+		for child in menu_panel.get_children():
+			if child is Button:
+				child.custom_minimum_size = Vector2(0, 44)
 	_show_main_menu()
 
 func _clear_menu() -> void:
