@@ -1,4 +1,4 @@
-# Police Officer Simulator
+# Fire Department Simulator
 
 A lightweight Godot 4 project for Windows PC and Android, set in the fictional Mirage Hills Police Department.
 
@@ -14,20 +14,20 @@ A lightweight Godot 4 project for Windows PC and Android, set in the fictional M
 - Civilian NPCs that wander around the city.
 - A simple patrol vehicle that can be entered/exited and driven.
 - On-screen movement, run and vehicle buttons for touch devices.
-- Keyboard controls for PC: WASD/arrows to move, Shift to run, E to enter/exit the patrol car, mouse to look, Esc to release/capture the mouse.
+- Keyboard controls for PC: WASD/arrows to move, Shift to run, E to enter/exit the fire engine, mouse to look, Esc to release/capture the mouse.
 - Low-detail procedural geometry and Godot's Compatibility renderer to target modest hardware.
 
 ## Build downloads
 
-GitHub Actions workflow **Build Police Officer Simulator (PC + Android)** exports:
-- `PoliceOfficerSimulator.exe` for Windows x86_64, artifact `PoliceOfficerSimulator-Windows-PC`.
-- `PoliceOfficerSimulator.apk` for Android arm64, artifact `PoliceOfficerSimulator-Android-APK`.
+GitHub Actions workflow **Build Fire Department Simulator (PC + Android)** exports:
+- `FireDepartmentSimulator.exe` for Windows x86_64, artifact `FireDepartmentSimulator-Windows-PC`.
+- `FireDepartmentSimulator.apk` for Android arm64, artifact `FireDepartmentSimulator-Android-APK`.
 
 Open the repository's **Actions** tab and select the latest successful run. Download the Windows and Android artifacts separately.
 
 ## Important scope note
 
-This is an early playable prototype, not a finished commercial simulator. The repository did not contain the officer `.glb` models mentioned in earlier development, so the current build uses generated placeholder characters and a primitive patrol car. NPCs use lightweight wandering behavior. The 911/radio loop and multiplayer are an early foundation and still need end-to-end testing on two devices; the prototype does not yet have full emergency response AI, traffic systems, arrest/citation mechanics, imported rigged character animations, sound, saves or production-quality vehicle physics.
+This is an early playable prototype, not a finished commercial simulator. The repository did not contain the officer `.glb` models mentioned in earlier development, so the current build uses generated placeholder characters and a primitive fire engine. NPCs use lightweight wandering behavior. The 911/radio loop and multiplayer are an early foundation and still need end-to-end testing on two devices; the prototype does not yet have full emergency response AI, traffic systems, arrest/citation mechanics, imported rigged character animations, sound, saves or production-quality vehicle physics.
 
 ## Engine
 
