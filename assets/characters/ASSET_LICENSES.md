@@ -10,11 +10,15 @@
 ## Personnel
 - police-officer.glb: Innerscene, 16.0 MB, static mesh, approx. 123k triangles.
 - firefighter.glb: Innerscene, 19.5 MB, static mesh, approx. 91k triangles.
-- paramedic.glb: Innerscene, 14.5 MB, static mesh; source page reports real-world scale.
+- paramedic.glb: Innerscene, 14.5 MB, static mesh.
+- civilian-male.glb: Innerscene, 123 KB, low-poly casual male, rigged T-pose.
+- civilian-female.glb: Innerscene, 82 KB, low-poly casual female in a walking pose.
 - License: CC0 public domain, as stated on each model's source page.
 - Sources:
   - https://www.innerscene.com/tools/library/3d-parts/police-officer-standing-3d-person-emergency-services-9fd93114
   - https://www.innerscene.com/tools/library/3d-parts/firefighter-standing-3d-person-emergency-services-3c007c1f
   - https://www.innerscene.com/tools/library/3d-parts/drew-3d-person-paramedic-with-response-bag-c90b16a3
-- These people are static, non-rigged meshes; they do not contain walk animations.
-- Existing project meshes models/civilian.obj and models/officer.obj remain in use for civilians and Sheriff's characters to keep APK and memory growth lower.
+  - https://www.innerscene.com/tools/library/3d-parts/low-poly-character-casual-male-t-pose-rigged-2de535f3
+  - https://www.innerscene.com/tools/library/3d-parts/low-poly-character-casual-female-walking-static-befaef7b
+- Police, firefighter and paramedic GLBs are detailed static meshes; they do not include walk animations.
+- Civilian GLBs are lightweight and are selected per NPC; models/officer.obj remains the existing sheriff-specific 3D mesh because a suitable free CC0 sheriff-uniform GLB was not verified.
