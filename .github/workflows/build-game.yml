@@ -1,4 +1,4 @@
-name: Build Police Officer Simulator (PC + Android)
+name: Build Fire Department Simulator (Windows + Android)
 
 on:
   workflow_dispatch:
@@ -8,6 +8,8 @@ on:
       - "main.gd"
       - "main.tscn"
       - "project.godot"
+      - "dispatch_system.gd"
+      - "README.md"
       - "export_presets.cfg"
       - "*.glb"
       - "models/**"
@@ -160,11 +162,11 @@ jobs:
       - name: Export Windows build
         run: |
           mkdir -p build
-          "$GODOT_BIN" --headless --path . --export-debug "Windows Desktop" build/PoliceOfficerSimulator.exe
+          "$GODOT_BIN" --headless --path . --export-debug "Windows Desktop" build/FireDepartmentSimulator.exe
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
         with:
-          name: PoliceOfficerSimulator-Windows-PC
+          name: FireDepartmentSimulator-Windows-PC
           path: build/PoliceOfficerSimulator.exe
           if-no-files-found: error
           retention-days: 14
@@ -224,11 +226,11 @@ jobs:
       - name: Export Android APK
         run: |
           mkdir -p build
-          "$GODOT_BIN" --headless --path . --export-debug "Android" build/PoliceOfficerSimulator.apk
+          "$GODOT_BIN" --headless --path . --export-debug "Android" build/FireDepartmentSimulator.apk
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: PoliceOfficerSimulator-Android-APK
+          name: FireDepartmentSimulator-Android-APK
           path: build/PoliceOfficerSimulator.apk
           if-no-files-found: error
           retention-days: 14
