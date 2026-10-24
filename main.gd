@@ -39,6 +39,16 @@ class MinimapControl extends Control:
 const WORLD_LIMIT := 92.0
 const WALK_SPEED := 5.0
 const RUN_SPEED := 8.0
+const FLORIDA_BUILDING_SCENES := [
+	"res://assets/florida_city/building-type-a.glb",
+	"res://assets/florida_city/building-type-b.glb",
+	"res://assets/florida_city/building-type-c.glb",
+	"res://assets/florida_city/building-type-d.glb",
+	"res://assets/florida_city/building-type-e.glb",
+	"res://assets/florida_city/building-type-f.glb",
+	"res://assets/florida_city/building-type-g.glb",
+	"res://assets/florida_city/building-type-h.glb"
+]
 
 var menu_layer: CanvasLayer
 var menu_panel: VBoxContainer
@@ -536,72 +546,64 @@ func _create_city_blocks() -> void:
 				_create_civilian_building(Vector3(x, 0, z), colors[rng.randi_range(0, colors.size()-1)])
 
 func _create_civic_building(building_type: String, base_position: Vector3) -> void:
-	var building_color := Color(0.66, 0.63, 0.55)
-	var accent_color := Color(0.13, 0.22, 0.34)
-	var width := 15.0
-	var depth := 12.0
-	var height := 7.0
+	var target_size := Vector3(13.0, 7.5, 11.0)
 	if building_type == "MEDICAL CENTER":
-		building_color = Color(0.83, 0.85, 0.83)
-		accent_color = Color(0.12, 0.48, 0.55)
-		width = 14.0
-		depth = 13.0
-		height = 8.0
+		target_size = Vector3(14.0, 8.5, 12.0)
 	elif building_type == "FIRE DEPARTMENT":
-		building_color = Color(0.57, 0.16, 0.12)
-		accent_color = Color(0.9, 0.72, 0.2)
-		width = 15.0
-		depth = 12.0
-		height = 6.0
+		target_size = Vector3(15.0, 7.0, 12.0)
 	elif building_type == "PUBLIC LIBRARY":
-		building_color = Color(0.69, 0.57, 0.42)
-		accent_color = Color(0.2, 0.32, 0.4)
-		width = 13.0
-		depth = 12.0
-		height = 6.0
-	_box(building_type.replace(" ", "_"), Vector3(width, height, depth), base_position + Vector3(0, height / 2.0, 0), building_color, true)
-	_box("CivicRoof_" + building_type, Vector3(width + 0.8, 0.35, depth + 0.8), base_position + Vector3(0, height + 0.16, 0), accent_color, false)
-	_box("Entrance_" + building_type, Vector3(3.2, 3.1, 0.22), base_position + Vector3(0, 1.55, -depth / 2.0 - 0.12), accent_color.darkened(0.4), false)
-	_box("Sign_" + building_type, Vector3(minf(width - 2.0, 10.0), 0.65, 0.18), base_position + Vector3(0, height - 1.0, -depth / 2.0 - 0.15), accent_color, false)
-	for window_x in [-4.0, 4.0]:
-		for window_y in [2.2, 4.5]:
-			_box("CivicWindow", Vector3(1.6, 1.1, 0.08), base_position + Vector3(window_x, window_y, -depth / 2.0 - 0.13), Color(0.18, 0.36, 0.47), false)
+		target_size = Vector3(12.0, 6.5, 11.0)
+	var variant := absi(hash(building_type)) % FLORIDA_BUILDING_SCENES.size()
+	if not _try_create_asset_building(base_position, target_size, variant, building_type.replace(" ", "_")):
+		push_error("Faltan modelos de ciudad Florida. Ejecuta el workflow de preparación de assets.")
+		return
+	# Señalización pequeña sobre fachadas modeladas; los edificios ya no se generan como cubos.
+	var sign_color := Color(0.08, 0.2, 0.34)
 	if building_type == "MEDICAL CENTER":
-		_box("MedicalCross", Vector3(0.45, 2.0, 0.16), base_position + Vector3(0, height - 1.3, -depth / 2.0 - 0.27), Color(0.88, 0.97, 0.95), false)
-		_box("MedicalCrossBar", Vector3(1.5, 0.45, 0.16), base_position + Vector3(0, height - 1.3, -depth / 2.0 - 0.27), Color(0.88, 0.97, 0.95), false)
+		sign_color = Color(0.1, 0.43, 0.48)
+	elif building_type == "FIRE DEPARTMENT":
+		sign_color = Color(0.62, 0.13, 0.1)
+	_box("Sign_" + building_type, Vector3(3.6, 0.42, 0.12), base_position + Vector3(0, target_size.y * 0.72, -target_size.z * 0.48), sign_color, false)
+
 
 func _create_civilian_building(base_position: Vector3, building_color: Color) -> void:
-	var height := rng.randf_range(5.0, 13.0)
-	var size_x := rng.randf_range(9.0, 14.0)
-	var size_z := rng.randf_range(9.0, 14.0)
-	var style := rng.randi_range(0, 2)
-	if absf(base_position.x) <= 45.0 and absf(base_position.z) <= 45.0 and style == 2:
-		height = rng.randf_range(14.0, 21.0)
-		size_x = rng.randf_range(10.0, 13.5)
-		size_z = rng.randf_range(10.0, 13.5)
-	if style == 0:
-		height = rng.randf_range(4.0, 6.0)
-		size_x = rng.randf_range(8.0, 10.0)
-		size_z = rng.randf_range(8.0, 11.0)
-	_box("CivilianBuilding", Vector3(size_x, height, size_z), base_position + Vector3(0, height / 2.0, 0), building_color, true)
-	var roof_color := building_color.darkened(0.28)
-	if style == 0:
-		# Techo a dos aguas simulado con una pieza elevada y aleros visibles.
-		_box("HouseRoof", Vector3(size_x + 0.9, 0.35, size_z + 0.9), base_position + Vector3(0, height + 0.18, 0), roof_color, false)
-	else:
-		_box("BuildingRoof", Vector3(size_x + 0.5, 0.28, size_z + 0.5), base_position + Vector3(0, height + 0.14, 0), roof_color, false)
-	# Fachada con ventanas separadas, marcos y puerta reconocible.
-	var floors: int = maxi(1, int(height / 2.6))
-	for floor_index in range(floors):
-		for window_index in range(3):
-			var wx := -size_x * 0.32 + window_index * size_x * 0.32
-			var wy := 1.4 + floor_index * 2.35
-			_box("WindowFrame", Vector3(1.45, 1.05, 0.16), base_position + Vector3(wx, wy, -size_z / 2.0 - 0.08), Color(0.88, 0.83, 0.68), false)
-			_box("CivilianWindow", Vector3(1.18, 0.8, 0.08), base_position + Vector3(wx, wy, -size_z / 2.0 - 0.17), Color(0.12, 0.29, 0.4), false)
-	_box("FrontDoor", Vector3(1.15, 2.15, 0.12), base_position + Vector3(0, 1.08, -size_z / 2.0 - 0.12), Color(0.18, 0.12, 0.08), false)
-	if style == 0:
-		_box("Porch", Vector3(2.8, 0.18, 1.2), base_position + Vector3(0, 0.12, -size_z / 2.0 - 0.6), Color(0.55, 0.52, 0.45), false)
+	var height := rng.randf_range(5.0, 9.0)
+	var size_x := rng.randf_range(8.5, 13.0)
+	var size_z := rng.randf_range(8.0, 12.0)
+	var style := rng.randi_range(0, FLORIDA_BUILDING_SCENES.size() - 1)
+	# En el centro se permiten fachadas más altas, sin volver a usar prismas como edificios.
+	if absf(base_position.x) <= 45.0 and absf(base_position.z) <= 45.0:
+		height = rng.randf_range(7.0, 11.0)
+	var target_size := Vector3(size_x, height, size_z)
+	if not _try_create_asset_building(base_position, target_size, style, "FloridaBuilding"):
+		push_error("No se encontró el modelo 3D de ciudad: assets/florida_city.")
+		return
 
+func _try_create_asset_building(base_position: Vector3, target_size: Vector3, variant: int, node_name: String) -> bool:
+	if FLORIDA_BUILDING_SCENES.is_empty():
+		return false
+	var asset_path: String = FLORIDA_BUILDING_SCENES[posmod(variant, FLORIDA_BUILDING_SCENES.size())]
+	var packed_scene := load(asset_path) as PackedScene
+	if packed_scene == null:
+		return false
+	var building_body := StaticBody3D.new()
+	building_body.name = node_name
+	building_body.position = base_position
+	game_world.add_child(building_body)
+	var collision_node := CollisionShape3D.new()
+	var collision := BoxShape3D.new()
+	collision.size = target_size
+	collision_node.shape = collision
+	collision_node.position.y = target_size.y * 0.5
+	building_body.add_child(collision_node)
+	var building_model := packed_scene.instantiate() as Node3D
+	if building_model == null:
+		building_body.queue_free()
+		return false
+	building_model.name = "TexturedBuildingModel"
+	building_body.add_child(building_model)
+	_fit_imported_model(building_model, target_size)
+	return true
 
 func _create_crosswalks() -> void:
 	# Zebra crossings and white lane-edge lines make the grid read as actual streets.
