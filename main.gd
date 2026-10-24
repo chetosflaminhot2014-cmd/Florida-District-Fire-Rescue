@@ -553,10 +553,23 @@ func _unhandled_input(event: InputEvent) -> void:
 		if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not driving:
-		player.rotate_y(-event.relative.x * mouse_sensitivity)
-		var vertical := 1.0 if invert_camera else -1.0
-		camera_pivot.rotate_x(event.relative.y * mouse_sensitivity * vertical)
-		camera_pivot.rotation.x = clampf(camera_pivot.rotation.x, deg_to_rad(-60), deg_to_rad(45))
+		_rotate_camera(event.relative)
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			look_touch_id = event.index
+			last_touch_position = event.position
+		elif event.index == look_touch_id:
+			look_touch_id = -1
+	if event is InputEventScreenDrag and event.index == look_touch_id and not driving:
+		_rotate_camera(event.relative)
+
+func _rotate_camera(relative_motion: Vector2) -> void:
+	if not is_instance_valid(player) or not is_instance_valid(camera_pivot):
+		return
+	player.rotate_y(-relative_motion.x * mouse_sensitivity)
+	var vertical := 1.0 if invert_camera else -1.0
+	camera_pivot.rotate_x(relative_motion.y * mouse_sensitivity * vertical)
+	camera_pivot.rotation.x = clampf(camera_pivot.rotation.x, deg_to_rad(-60), deg_to_rad(45))
 
 func _toggle_pause_menu() -> void:
 	if not game_active:
