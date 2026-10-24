@@ -847,33 +847,46 @@ func _play_player_animation(state: String) -> void:
 func _make_person(female: bool, police: bool, role: String = "civilian") -> Node3D:
 	var person := Node3D.new()
 	var model_path := "res://models/civilian.obj"
-	if police or role == "sheriff":
-		model_path = "res://models/officer.obj"
+	var imported_character_path := ""
+	if role == "police":
+		imported_character_path = "res://assets/characters/police-officer.glb"
 	elif role == "fire":
-		model_path = "res://models/fire.obj"
+		imported_character_path = "res://assets/characters/firefighter.glb"
 	elif role == "ems":
-		model_path = "res://models/ems.obj"
-	var model_mesh := load(model_path) as Mesh
-	if model_mesh != null:
-		var model := MeshInstance3D.new()
-		model.name = "CustomCharacterModel"
-		model.mesh = model_mesh
-		model.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-		person.add_child(model)
-	else:
-		# Fallback only if a model asset cannot be imported.
-		_add_person_capsule(person, Vector3(0, 1.08, 0), 0.29, 0.72, Color(0.07, 0.12, 0.23))
-		_sphere_child(person, Vector3(0, 1.64, 0), 0.22, Color(0.72, 0.53, 0.4))
-	# Add visible duty equipment to the imported, unrigged character meshes.
-	if police or role == "sheriff":
+		imported_character_path = "res://assets/characters/paramedic.glb"
+	elif police or role == "sheriff":
+		model_path = "res://models/officer.obj"
+	var imported_character := false
+	if not imported_character_path.is_empty():
+		var character_scene := load(imported_character_path) as PackedScene
+		if character_scene != null:
+			var character_model := character_scene.instantiate() as Node3D
+			if character_model != null:
+				character_model.name = "ImportedCharacterModel"
+				person.add_child(character_model)
+				imported_character = true
+	if not imported_character:
+		var model_mesh := load(model_path) as Mesh
+		if model_mesh != null:
+			var model := MeshInstance3D.new()
+			model.name = "CustomCharacterModel"
+			model.mesh = model_mesh
+			model.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+			person.add_child(model)
+		else:
+			# Fallback only if an asset cannot be imported.
+			_add_person_capsule(person, Vector3(0, 1.08, 0), 0.29, 0.72, Color(0.07, 0.12, 0.23))
+			_sphere_child(person, Vector3(0, 1.64, 0), 0.22, Color(0.72, 0.53, 0.4))
+	# Imported uniform models already include their clothing and equipment.
+	if not imported_character and (police or role == "sheriff"):
 		_add_person_box(person, Vector3(0.56, 0.09, 0.34), Vector3(0, 0.96, 0), Color(0.035, 0.04, 0.045))
 		_add_person_box(person, Vector3(0.09, 0.13, 0.035), Vector3(-0.12, 1.38, -0.19), Color(0.92, 0.72, 0.18))
 		_add_person_box(person, Vector3(0.10, 0.16, 0.08), Vector3(0.22, 1.39, -0.14), Color(0.035, 0.04, 0.05))
 		_add_person_box(person, Vector3(0.32, 0.08, 0.30), Vector3(0, 1.79, 0), Color(0.035, 0.055, 0.09))
-	elif role == "fire":
+	elif not imported_character and role == "fire":
 		_add_person_box(person, Vector3(0.43, 0.12, 0.36), Vector3(0, 1.78, 0), Color(0.68, 0.07, 0.035))
 		_add_person_box(person, Vector3(0.58, 0.07, 0.35), Vector3(0, 1.03, -0.01), Color(0.9, 0.68, 0.12))
-	elif role == "ems":
+	elif not imported_character and role == "ems":
 		_add_person_box(person, Vector3(0.58, 0.08, 0.34), Vector3(0, 1.02, -0.01), Color(0.9, 0.78, 0.16))
 		_add_person_box(person, Vector3(0.12, 0.12, 0.04), Vector3(-0.14, 1.38, -0.19), Color(0.92, 0.94, 0.91))
 	return person
@@ -972,15 +985,36 @@ func _create_second_patrol() -> void:
 
 
 func _create_service_vehicles() -> void:
-	# Lightweight parked emergency-service vehicles for the prototype.
-	var ambulance := _box("AmbulanceBody", Vector3(2.2, 1.5, 4.5), Vector3(8, 0.8, -18), Color(0.88, 0.9, 0.88), false)
-	_box("AmbulanceCab", Vector3(2.05, 1.15, 1.8), Vector3(8, 1.95, -19.0), Color(0.75, 0.84, 0.87), false)
-	_box("AmbulanceStripe", Vector3(2.23, 0.22, 3.0), Vector3(8, 0.95, -18), Color(0.75, 0.08, 0.07), false)
-	_box("AmbulanceLightbar", Vector3(1.0, 0.16, 0.35), Vector3(8, 2.58, -19.0), Color(0.05, 0.2, 0.95), false)
-	var fire_truck := _box("FireEngineBody", Vector3(2.5, 1.65, 5.0), Vector3(15, 0.9, -18), Color(0.68, 0.055, 0.035), false)
-	_box("FireEngineCab", Vector3(2.35, 1.35, 1.8), Vector3(15, 2.0, -19.3), Color(0.72, 0.07, 0.04), false)
-	_box("FireEngineStripe", Vector3(2.53, 0.18, 3.2), Vector3(15, 1.05, -18), Color(0.92, 0.78, 0.16), false)
-	_box("FireEngineLightbar", Vector3(1.0, 0.16, 0.35), Vector3(15, 2.75, -19.3), Color(0.05, 0.2, 0.95), false)
+	# Real lightweight GLB vehicle models replace the old box-built emergency vehicles.
+	_create_static_vehicle_model("Ambulance_Model", "res://assets/vehicles/ambulance.glb", Vector3(8.0, 0.0, -18.0), Vector3(2.25, 2.35, 4.8))
+	_create_static_vehicle_model("FireTruck_Model", "res://assets/vehicles/firetruck.glb", Vector3(15.0, 0.0, -18.0), Vector3(2.6, 2.9, 5.5))
+	_create_static_vehicle_model("PoliceCruiser_Model", "res://assets/vehicles/police.glb", Vector3(23.0, 0.0, -18.0), Vector3(2.2, 1.9, 4.6))
+	_create_static_vehicle_model("CivilianSedan_Model", "res://assets/vehicles/sedan.glb", Vector3(-13.0, 0.0, -18.0), Vector3(2.1, 1.8, 4.5))
+	_create_static_vehicle_model("CivilianSUV_Model", "res://assets/vehicles/suv.glb", Vector3(-20.0, 0.0, -18.0), Vector3(2.2, 2.0, 4.7))
+
+func _create_static_vehicle_model(node_name: String, model_path: String, base_position: Vector3, target_size: Vector3) -> void:
+	var vehicle_body := StaticBody3D.new()
+	vehicle_body.name = node_name
+	vehicle_body.position = base_position
+	game_world.add_child(vehicle_body)
+	var collision_node := CollisionShape3D.new()
+	var collision := BoxShape3D.new()
+	collision.size = target_size
+	collision_node.shape = collision
+	collision_node.position.y = target_size.y * 0.5
+	vehicle_body.add_child(collision_node)
+	var packed := load(model_path) as PackedScene
+	if packed == null:
+		push_error("No se pudo cargar el modelo 3D: " + model_path)
+		return
+	var model := packed.instantiate() as Node3D
+	if model == null:
+		push_error("El archivo no contiene un modelo 3D válido: " + model_path)
+		return
+	model.name = "VehicleVisual"
+	vehicle_body.add_child(model)
+	_fit_imported_model(model, target_size)
+
 
 func _create_npcs(count: int) -> void:
 	npc_nodes.clear()
@@ -991,6 +1025,7 @@ func _create_npcs(count: int) -> void:
 		if i == 0 or i == 1: role = "sheriff"
 		elif i == 2 or i == 3: role = "ems"
 		elif i == 4 or i == 5: role = "fire"
+		elif i == 6 or i == 7: role = "police"
 		npc.name = role.to_upper() + "_NPC_%02d" % i
 		var x := rng.randf_range(-85, 85)
 		var z := rng.randf_range(-85, 85)
