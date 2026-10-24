@@ -448,12 +448,12 @@ func _create_hud() -> void:
 	pause.pressed.connect(_toggle_pause_menu)
 	hud_layer.add_child(pause)
 	# Touch controls are always visible on Android and harmless on PC.
-	_touch_button("▲", Vector2(24, -160), Vector2(66, 60), func(): touch_move.y = -1.0, func(): if touch_move.y < 0: touch_move.y = 0.0)
-	_touch_button("▼", Vector2(24, -88), Vector2(66, 60), func(): touch_move.y = 1.0, func(): if touch_move.y > 0: touch_move.y = 0.0)
-	_touch_button("◀", Vector2(96, -88), Vector2(66, 60), func(): touch_move.x = -1.0, func(): if touch_move.x < 0: touch_move.x = 0.0)
-	_touch_button("▶", Vector2(168, -88), Vector2(66, 60), func(): touch_move.x = 1.0, func(): if touch_move.x > 0: touch_move.x = 0.0)
+	_touch_button("▲", Vector2(24, -160), Vector2(66, 60), func(): touch_move.y = -1.0, func(): touch_move.y = 0.0)
+	_touch_button("▼", Vector2(24, -88), Vector2(66, 60), func(): touch_move.y = 1.0, func(): touch_move.y = 0.0)
+	_touch_button("◀", Vector2(96, -88), Vector2(66, 60), func(): touch_move.x = -1.0, func(): touch_move.x = 0.0)
+	_touch_button("▶", Vector2(168, -88), Vector2(66, 60), func(): touch_move.x = 1.0, func(): touch_move.x = 0.0)
 	_touch_button("CORRER", Vector2(-150, -100), Vector2(120, 54), func(): touch_run = true, func(): touch_run = false, true)
-	_touch_button("USAR / BAJAR", Vector2(-150, -38), Vector2(120, 54), _interact_vehicle, Callable(), true)
+	_touch_button("USAR / BAJAR", Vector2(-150, -38), Vector2(120, 54), func(): pass, Callable(), true)
 
 func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size: Vector2, on_down: Callable, on_up: Callable, right_side := false) -> void:
 	var b := Button.new()
@@ -563,6 +563,7 @@ func _toggle_pause_menu() -> void:
 		return
 	get_tree().paused = not get_tree().paused
 	var popup := AcceptDialog.new()
+	popup.process_mode = Node.PROCESS_MODE_ALWAYS
 	popup.title = "Police Officer Simulator"
 	popup.dialog_text = "Juego pausado. Pulsa PAUSA para continuar."
 	add_child(popup)
