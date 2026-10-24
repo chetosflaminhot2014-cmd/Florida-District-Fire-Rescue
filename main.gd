@@ -242,6 +242,7 @@ func _start_game(female: bool) -> void:
 	_create_world()
 	_create_player(female)
 	_create_vehicle()
+	_create_service_vehicles()
 	_create_npcs(18)
 	_create_hud()
 	_create_dispatch_system()
@@ -446,6 +447,17 @@ func _create_vehicle() -> void:
 	for x in [-0.9, 0.9]:
 		for z in [-1.35, 1.35]:
 			_sphere_child(vehicle, Vector3(x, 0.22, z), 0.28, Color(0.04,0.04,0.05))
+
+func _create_service_vehicles() -> void:
+	# Lightweight parked emergency-service vehicles for the prototype.
+	var ambulance := _box("AmbulanceBody", Vector3(2.2, 1.5, 4.5), Vector3(8, 0.8, -18), Color(0.88, 0.9, 0.88), false)
+	_box("AmbulanceCab", Vector3(2.05, 1.15, 1.8), Vector3(8, 1.95, -19.0), Color(0.75, 0.84, 0.87), false)
+	_box("AmbulanceStripe", Vector3(2.23, 0.22, 3.0), Vector3(8, 0.95, -18), Color(0.75, 0.08, 0.07), false)
+	_box("AmbulanceLightbar", Vector3(1.0, 0.16, 0.35), Vector3(8, 2.58, -19.0), Color(0.05, 0.2, 0.95), false)
+	var fire_truck := _box("FireEngineBody", Vector3(2.5, 1.65, 5.0), Vector3(15, 0.9, -18), Color(0.68, 0.055, 0.035), false)
+	_box("FireEngineCab", Vector3(2.35, 1.35, 1.8), Vector3(15, 2.0, -19.3), Color(0.72, 0.07, 0.04), false)
+	_box("FireEngineStripe", Vector3(2.53, 0.18, 3.2), Vector3(15, 1.05, -18), Color(0.92, 0.78, 0.16), false)
+	_box("FireEngineLightbar", Vector3(1.0, 0.16, 0.35), Vector3(15, 2.75, -19.3), Color(0.05, 0.2, 0.95), false)
 
 func _create_npcs(count: int) -> void:
 	npc_nodes.clear()
