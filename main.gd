@@ -4,7 +4,7 @@ class MinimapControl extends Control:
 	var player_world_position := Vector3.ZERO
 	var target_world_position := Vector3.ZERO
 	var target_active := false
-	var world_limit := 92.0
+	var world_limit := 220.0
 
 	func _draw() -> void:
 		var area := Rect2(Vector2.ZERO, size)
@@ -33,10 +33,10 @@ class MinimapControl extends Control:
 			pad + clampf((world_position.z + world_limit) / (world_limit * 2.0), 0.0, 1.0) * map_size.y
 		)
 
-# Police Officer Simulator — lightweight procedural prototype for PC and Android.
+# Fire Department Simulator — open-world emergency response prototype for Android and Windows.
 # No external assets are required; missing officer models are replaced by generated characters.
 
-const WORLD_LIMIT := 92.0
+const WORLD_LIMIT := 220.0
 const WALK_SPEED := 5.0
 const RUN_SPEED := 8.0
 const PATROL_MAX_FORWARD_SPEED := 27.0 # m/s; about 97 km/h
@@ -124,6 +124,12 @@ var multiplayer_ip_input: LineEdit
 var multiplayer_name_input: LineEdit
 var shared_materials: Dictionary = {}
 var player_anim_clock := 0.0
+var fire_active := false
+var fire_strength := 100.0
+var fire_location := Vector3.ZERO
+var extinguishing := false
+var fire_visual: Node3D
+var fire_glow: OmniLight3D
 
 func _ready() -> void:
 	rng.randomize()
@@ -166,14 +172,14 @@ func _create_startup_fallback() -> CanvasLayer:
 	column.add_theme_constant_override("separation", 14)
 	center.add_child(column)
 	var title := Label.new()
-	title.text = "POLICE OFFICER SIMULATOR"
+	title.text = "FIRE DEPARTMENT SIMULATOR"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.add_theme_font_size_override("font_size", 23)
 	title.add_theme_color_override("font_color", Color(0.92, 0.96, 1.0))
 	column.add_child(title)
 	var message := Label.new()
-	message.text = "Iniciando Mirage Hills..."
+	message.text = "Iniciando Fire Department Simulator..."
 	message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	message.add_theme_color_override("font_color", Color(0.55, 0.75, 0.92))
@@ -202,6 +208,7 @@ func _process(delta: float) -> void:
 		return
 	_update_npcs(delta)
 	_update_remote_network(delta)
+	_update_fire_response(delta)
 	if is_instance_valid(minimap):
 		var tracked_position := vehicle.global_position if driving and is_instance_valid(vehicle) else (player.global_position if is_instance_valid(player) else Vector3.ZERO)
 		minimap.player_world_position = tracked_position
@@ -212,9 +219,9 @@ func _process(delta: float) -> void:
 		if driving:
 			var speed_kmh := roundi(absf(vehicle_speed) * 3.6)
 			var gear := "R" if vehicle_speed < -0.2 else "D"
-			status_label.text = "PATRULLA · %d km/h · %s · LUCES %s" % [speed_kmh, gear, "ON" if emergency_lights_enabled else "OFF"]
+			status_label.text = "CAMIÓN · %d km/h · %s · LUCES %s" % [speed_kmh, gear, "ON" if emergency_lights_enabled else "OFF"]
 		else:
-			status_label.text = "AGENTE A PIE · WASD · E PARA SUBIR/BAJAR · NPC: " + str(npc_nodes.size())
+			status_label.text = "BOMBERO A PIE · WASD · E PARA SUBIR/BAJAR · NPC: " + str(npc_nodes.size())
 
 func _create_menu() -> void:
 	menu_layer = CanvasLayer.new()
@@ -263,12 +270,12 @@ func _create_menu() -> void:
 	info.add_theme_constant_override("separation", 16)
 	right_panel.add_child(info)
 	var status := Label.new()
-	status.text = "MIRAGE HILLS  /  PATROL DIVISION"
+	status.text = "MIRAGE HILLS  /  FIRE & RESCUE"
 	status.add_theme_font_size_override("font_size", 13)
 	status.add_theme_color_override("font_color", Color(0.35, 0.72, 1.0))
 	info.add_child(status)
 	var scene_title := Label.new()
-	scene_title.text = "YOUR CITY.\nYOUR SHIFT."
+	scene_title.text = "YOUR CITY.\nYOUR CALL."
 	scene_title.add_theme_font_size_override("font_size", 34)
 	scene_title.add_theme_color_override("font_color", Color(0.92, 0.96, 1.0))
 	info.add_child(scene_title)
@@ -277,7 +284,7 @@ func _create_menu() -> void:
 	divider.color = Color(0.13, 0.49, 0.78)
 	info.add_child(divider)
 	var description := Label.new()
-	description.text = "Respond to calls, patrol the streets,\nand work together as one unit."
+	description.text = "Answer emergency calls, drive the engine,\nand protect every district."
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description.add_theme_font_size_override("font_size", 17)
 	description.add_theme_color_override("font_color", Color(0.68, 0.76, 0.84))
@@ -285,7 +292,7 @@ func _create_menu() -> void:
 	var feature_gap := Control.new()
 	feature_gap.custom_minimum_size.y = 18
 	info.add_child(feature_gap)
-	for feature in ["01  OPEN-WORLD CITY", "02  EMERGENCY DISPATCH", "03  MULTIPLAYER PATROL"]:
+	for feature in ["01  OPEN-WORLD DISTRICTS", "02  FIRE & RESCUE CALLS", "03  ENGINE RESPONSE"]:
 		var feature_label := Label.new()
 		feature_label.text = feature
 		feature_label.add_theme_font_size_override("font_size", 14)
@@ -359,12 +366,12 @@ func _add_title() -> void:
 	badge_label.add_theme_color_override("font_color", Color(0.82, 0.92, 1.0))
 	emblem.add_child(badge_label)
 	var title := Label.new()
-	title.text = "POLICE OFFICER\nSIMULATOR"
+	title.text = "FIRE DEPARTMENT\nSIMULATOR"
 	title.add_theme_font_size_override("font_size", 28)
 	title.add_theme_color_override("font_color", Color(0.95, 0.97, 1.0))
 	menu_panel.add_child(title)
 	var subtitle := Label.new()
-	subtitle.text = "MIRAGE HILLS POLICE DEPARTMENT"
+	subtitle.text = "MIRAGE HILLS FIRE & RESCUE"
 	subtitle.add_theme_font_size_override("font_size", 10)
 	subtitle.add_theme_color_override("font_color", Color(0.32, 0.67, 0.94))
 	menu_panel.add_child(subtitle)
@@ -407,12 +414,12 @@ func _show_character_selection() -> void:
 	_clear_menu()
 	_add_title()
 	var label := Label.new()
-	label.text = "PERSONAJE DISPONIBLE"
+	label.text = "BOMBERO DISPONIBLE"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 19)
 	menu_panel.add_child(label)
 	var detail := Label.new()
-	detail.text = "OFICIAL FEMENINA · UNIFORME DE PATRULLA"
+	detail.text = "BOMBERO · UNIDAD DE RESPUESTA"
 	detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	menu_panel.add_child(detail)
@@ -501,7 +508,6 @@ func _start_game(female: bool) -> void:
 	_create_world()
 	_create_player(female)
 	_create_vehicle()
-	_create_second_patrol()
 	_create_service_vehicles()
 	_create_npcs(10 if OS.has_feature("mobile") else 14)
 	_create_hud()
@@ -529,47 +535,47 @@ func _create_world() -> void:
 	sun.light_energy = 1.1
 	sun.shadow_enabled = false
 	game_world.add_child(sun)
-	_box("Ground", Vector3(200, 1, 200), Vector3(0, -0.55, 0), Color(0.19, 0.29, 0.19), true)
+	_box("Ground", Vector3(440, 1, 440), Vector3(0, -0.55, 0), Color(0.19, 0.29, 0.19), true)
 	# A cross-shaped road grid with sidewalks, intersections, markings, and parking bays.
-	for z in [-60.0, -30.0, 0.0, 30.0, 60.0]:
-		_box("Street_NS", Vector3(12, 0.08, 200), Vector3(z, 0.0, 0), Color(0.105, 0.12, 0.14), false)
-		_box("Sidewalk_L", Vector3(2.0, 0.18, 200), Vector3(z - 7.0, 0.05, 0), Color(0.48, 0.49, 0.48), false)
-		_box("Sidewalk_R", Vector3(2.0, 0.18, 200), Vector3(z + 7.0, 0.05, 0), Color(0.48, 0.49, 0.48), false)
-	for x in [-60.0, -30.0, 0.0, 30.0, 60.0]:
-		_box("Street_EW", Vector3(200, 0.08, 12), Vector3(0, 0.015, x), Color(0.105, 0.12, 0.14), false)
-		_box("Sidewalk_T", Vector3(200, 0.18, 2.0), Vector3(0, 0.05, x - 7.0), Color(0.48, 0.49, 0.48), false)
-		_box("Sidewalk_B", Vector3(200, 0.18, 2.0), Vector3(0, 0.05, x + 7.0), Color(0.48, 0.49, 0.48), false)
-	for z in range(-90, 100, 8):
-		for x in [-60.0, -30.0, 0.0, 30.0, 60.0]:
+	for z in [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]:
+		_box("Street_NS", Vector3(12, 0.08, 440), Vector3(z, 0.0, 0), Color(0.105, 0.12, 0.14), false)
+		_box("Sidewalk_L", Vector3(2.0, 0.18, 440), Vector3(z - 7.0, 0.05, 0), Color(0.48, 0.49, 0.48), false)
+		_box("Sidewalk_R", Vector3(2.0, 0.18, 440), Vector3(z + 7.0, 0.05, 0), Color(0.48, 0.49, 0.48), false)
+	for x in [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]:
+		_box("Street_EW", Vector3(440, 0.08, 12), Vector3(0, 0.015, x), Color(0.105, 0.12, 0.14), false)
+		_box("Sidewalk_T", Vector3(440, 0.18, 2.0), Vector3(0, 0.05, x - 7.0), Color(0.48, 0.49, 0.48), false)
+		_box("Sidewalk_B", Vector3(440, 0.18, 2.0), Vector3(0, 0.05, x + 7.0), Color(0.48, 0.49, 0.48), false)
+	for z in range(-210, 220, 8):
+		for x in [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]:
 			_box("CenterLine", Vector3(0.16, 0.025, 3.4), Vector3(x, 0.06, float(z)), Color(0.95, 0.82, 0.35), false)
-	for x in range(-90, 100, 8):
-		for z in [-60.0, -30.0, 0.0, 30.0, 60.0]:
+	for x in range(-210, 220, 8):
+		for z in [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]:
 			_box("CenterLine", Vector3(3.4, 0.025, 0.16), Vector3(float(x), 0.06, z), Color(0.95, 0.82, 0.35), false)
-	_create_police_station()
+	_create_fire_station()
 	_create_city_blocks()
 	_create_trees()
 	_create_street_furniture()
 	_create_crosswalks()
 
-func _create_police_station() -> void:
-	_box("PoliceStation", Vector3(17, 6, 11), Vector3(-20, 3, 18), Color(0.25, 0.31, 0.39), true)
-	_box("StationEntrance", Vector3(5, 3.3, 0.25), Vector3(-20, 1.65, 12.35), Color(0.08, 0.13, 0.2), false)
-	_box("StationSign", Vector3(8, 0.8, 0.2), Vector3(-20, 5.0, 12.15), Color(0.08, 0.2, 0.38), false)
-	_box("StationParking", Vector3(24, 0.08, 16), Vector3(-20, 0.0, 4), Color(0.16, 0.17, 0.18), false)
+func _create_fire_station() -> void:
+	_box("FireStation", Vector3(17, 6, 11), Vector3(60, 3, 115), Color(0.48, 0.12, 0.09), true)
+	_box("StationEntrance", Vector3(5, 3.3, 0.25), Vector3(60, 1.65, 109.35), Color(0.08, 0.13, 0.2), false)
+	_box("StationSign", Vector3(8, 0.8, 0.2), Vector3(60, 5.0, 109.15), Color(0.62, 0.13, 0.1), false)
+	_box("StationParking", Vector3(24, 0.08, 16), Vector3(60, 0.0, 101), Color(0.16, 0.17, 0.18), false)
 	for i in range(3):
-		_box("ParkingLine", Vector3(0.12, 0.025, 6), Vector3(-28 + i * 7, 0.06, 4), Color(0.9, 0.9, 0.82), false)
+		_box("ParkingLine", Vector3(0.12, 0.025, 6), Vector3(52 + i * 7, 0.06, 101), Color(0.9, 0.9, 0.82), false)
 
 func _create_city_blocks() -> void:
 	var colors: Array[Color] = [Color(0.48,0.48,0.46), Color(0.42,0.46,0.5), Color(0.56,0.48,0.39), Color(0.34,0.42,0.47), Color(0.55,0.56,0.53)]
-	for x in [-75.0, -45.0, -15.0, 15.0, 45.0, 75.0]:
-		for z in [-75.0, -45.0, -15.0, 15.0, 45.0, 75.0]:
+	for x in [-165.0, -105.0, -45.0, 15.0, 75.0, 135.0]:
+		for z in [-165.0, -105.0, -45.0, 15.0, 75.0, 135.0]:
 			if absf(x) < 20 and absf(z - 18) < 18:
 				continue
 			var civic_name := ""
-			if x == -45.0 and z == -45.0: civic_name = "CITY HALL"
-			elif x == 45.0 and z == -45.0: civic_name = "MEDICAL CENTER"
-			elif x == 45.0 and z == 45.0: civic_name = "FIRE DEPARTMENT"
-			elif x == -75.0 and z == 45.0: civic_name = "PUBLIC LIBRARY"
+			if x == -105.0 and z == -105.0: civic_name = "CITY HALL"
+			elif x == 75.0 and z == -105.0: civic_name = "MEDICAL CENTER"
+			elif x == 75.0 and z == 75.0: civic_name = "FIRE DEPARTMENT"
+			elif x == -165.0 and z == 75.0: civic_name = "PUBLIC LIBRARY"
 			var block_position := Vector3(x, 0, z)
 			if not civic_name.is_empty():
 				_create_civic_building(civic_name, block_position)
@@ -808,7 +814,7 @@ func _equip_weapon(weapon_name: String) -> void:
 func _create_player(female: bool) -> void:
 	player = CharacterBody3D.new()
 	player.name = "Player"
-	player.position = Vector3(-17.0, 0.08, 6.0)
+	player.position = Vector3(56.0, 0.08, 92.0)
 	game_world.add_child(player)
 	var collider := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
@@ -984,29 +990,29 @@ func _sphere_child(parent: Node3D, pos: Vector3, radius: float, color: Color) ->
 func _create_vehicle() -> void:
 	# Única patrulla jugable: modelo GLB aportado al proyecto.
 	vehicle = CharacterBody3D.new()
-	vehicle.name = "PatrolCar_LAPD_Model"
-	vehicle.position = Vector3(-20, 0.0, 3)
+	vehicle.name = "FireEngine_Main"
+	vehicle.position = Vector3(60, 0.0, 92)
 	vehicle.floor_snap_length = 0.2
 	game_world.add_child(vehicle)
 
 	# La colisión independiente mantiene conducción y choques aunque el modelo sea solo visual.
 	var shape_node := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(2.0, 1.25, 4.5)
+	shape.size = Vector3(2.6, 2.2, 5.5)
 	shape_node.shape = shape
-	shape_node.position.y = 0.63
+	shape_node.position.y = 1.1
 	vehicle.add_child(shape_node)
 
-	var patrol_scene := load("res://los_angeles_police_department_car.glb") as PackedScene
+	var patrol_scene := load("res://assets/vehicles/firetruck.glb") as PackedScene
 	if patrol_scene != null:
 		var patrol_visual := patrol_scene.instantiate()
-		patrol_visual.name = "PatrolCarModel"
+		patrol_visual.name = "FireEngineModel"
 		if patrol_visual is Node3D:
 			patrol_visual.position = Vector3.ZERO
 		vehicle.add_child(patrol_visual)
-		_fit_imported_model(patrol_visual, Vector3(2.05, 1.55, 4.35))
+		_fit_imported_model(patrol_visual, Vector3(2.6, 2.5, 5.5))
 	else:
-		push_error("No se pudo cargar res://los_angeles_police_department_car.glb")
+		push_error("No se pudo cargar res://assets/vehicles/firetruck.glb")
 
 	# Luces de emergencia funcionales sobre el techo, independientes del modelo.
 	patrol_red_light = _add_person_box(vehicle, Vector3(0.32, 0.13, 0.22), Vector3(-0.34, 1.52, -0.05), Color(0.95, 0.025, 0.025))
@@ -1043,8 +1049,6 @@ func _create_second_patrol() -> void:
 func _create_service_vehicles() -> void:
 	# Real lightweight GLB vehicle models replace the old box-built emergency vehicles.
 	_create_static_vehicle_model("Ambulance_Model", "res://assets/vehicles/ambulance.glb", Vector3(8.0, 0.0, -18.0), Vector3(2.25, 2.35, 4.8))
-	_create_static_vehicle_model("FireTruck_Model", "res://assets/vehicles/firetruck.glb", Vector3(15.0, 0.0, -18.0), Vector3(2.6, 2.9, 5.5))
-	_create_static_vehicle_model("PoliceCruiser_Model", "res://assets/vehicles/police.glb", Vector3(23.0, 0.0, -18.0), Vector3(2.2, 1.9, 4.6))
 	_create_static_vehicle_model("CivilianSedan_Model", "res://assets/vehicles/sedan.glb", Vector3(-13.0, 0.0, -18.0), Vector3(2.1, 1.8, 4.5))
 	_create_static_vehicle_model("CivilianSUV_Model", "res://assets/vehicles/suv.glb", Vector3(-20.0, 0.0, -18.0), Vector3(2.2, 2.0, 4.7))
 
@@ -1083,15 +1087,15 @@ func _create_npcs(count: int) -> void:
 		elif i == 4 or i == 5: role = "fire"
 		elif i == 6 or i == 7: role = "police"
 		npc.name = role.to_upper() + "_NPC_%02d" % i
-		var x := rng.randf_range(-85, 85)
-		var z := rng.randf_range(-85, 85)
+		var x := rng.randf_range(-200, 200)
+		var z := rng.randf_range(-200, 200)
 		if absf(x) < 10:
 			x += 18
 		npc.position = Vector3(x, 0, z)
 		npc.add_child(_make_person(false, role == "sheriff", role))
 		game_world.add_child(npc)
 		npc_nodes.append(npc)
-		npc_targets.append(Vector3(rng.randf_range(-85,85), 0, rng.randf_range(-85,85)))
+		npc_targets.append(Vector3(rng.randf_range(-200,200), 0, rng.randf_range(-200,200)))
 
 func _update_npcs(delta: float) -> void:
 	for i in range(npc_nodes.size()):
@@ -1102,7 +1106,7 @@ func _update_npcs(delta: float) -> void:
 		var offset: Vector3 = target - npc.position
 		offset.y = 0
 		if offset.length() < 2.0:
-			npc_targets[i] = Vector3(rng.randf_range(-85,85), 0, rng.randf_range(-85,85))
+			npc_targets[i] = Vector3(rng.randf_range(-200,200), 0, rng.randf_range(-200,200))
 			continue
 		var direction := offset.normalized()
 		npc.position += direction * delta * 1.0
@@ -1117,6 +1121,8 @@ func _create_dispatch_system() -> void:
 func _on_dispatch_call_accepted(location: Vector3, description: String) -> void:
 	dispatch_target_position = location
 	dispatch_target_active = true
+	if description.to_lower().contains("incendio") or description.to_lower().contains("fuego"):
+		_spawn_fire(location)
 	if is_instance_valid(minimap):
 		minimap.target_world_position = location
 		minimap.target_active = true
@@ -1139,6 +1145,75 @@ func _on_dispatch_call_accepted(location: Vector3, description: String) -> void:
 	game_world.add_child(dispatch_marker)
 	if is_instance_valid(status_label):
 		status_label.text = "911 ASIGNADO: " + description + " · Coordenadas %.0f, %.0f" % [location.x, location.z]
+
+
+func _toggle_extinguishing() -> void:
+	if not game_active:
+		return
+	extinguishing = not extinguishing
+	if is_instance_valid(status_label):
+		status_label.text = "MANGUERA ABIERTA: acércate al foco" if extinguishing else "MANGUERA CERRADA"
+
+func _spawn_fire(location: Vector3) -> void:
+	if is_instance_valid(fire_visual):
+		fire_visual.queue_free()
+	fire_location = location
+	fire_strength = 100.0
+	fire_active = true
+	fire_visual = Node3D.new()
+	fire_visual.name = "ActiveFire"
+	fire_visual.position = location
+	game_world.add_child(fire_visual)
+	for i in range(5):
+		var flame := MeshInstance3D.new()
+		var sphere := SphereMesh.new()
+		sphere.radius = 0.65 + float(i % 3) * 0.18
+		sphere.height = sphere.radius * 2.0
+		flame.mesh = sphere
+		flame.position = Vector3(rng.randf_range(-1.0, 1.0), 0.7 + float(i) * 0.55, rng.randf_range(-0.8, 0.8))
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.albedo_color = Color(1.0, 0.18 + float(i % 2) * 0.18, 0.015, 0.88)
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.emission_enabled = true
+		mat.emission = Color(1.0, 0.12, 0.01)
+		flame.material_override = mat
+		fire_visual.add_child(flame)
+	fire_glow = OmniLight3D.new()
+	fire_glow.light_color = Color(1.0, 0.22, 0.035)
+	fire_glow.light_energy = 2.2
+	fire_glow.omni_range = 13.0
+	fire_glow.shadow_enabled = false
+	fire_glow.position.y = 2.0
+	fire_visual.add_child(fire_glow)
+
+func _update_fire_response(delta: float) -> void:
+	if not fire_active:
+		return
+	var responder_position := vehicle.global_position if driving and is_instance_valid(vehicle) else (player.global_position if is_instance_valid(player) else Vector3.ZERO)
+	var distance := responder_position.distance_to(fire_location)
+	if extinguishing and distance <= 16.0:
+		fire_strength = maxf(0.0, fire_strength - delta * 18.0)
+		if is_instance_valid(fire_glow):
+			fire_glow.light_energy = 2.2 * fire_strength / 100.0
+		if is_instance_valid(status_label):
+			status_label.text = "EXTINGUIENDO INCENDIO · %d%%" % roundi(fire_strength)
+		if fire_strength <= 0.0:
+			fire_active = false
+			extinguishing = false
+			dispatch_target_active = false
+			if is_instance_valid(fire_visual):
+				fire_visual.queue_free()
+			if is_instance_valid(dispatch_marker):
+				dispatch_marker.queue_free()
+				dispatch_marker = null
+			if is_instance_valid(minimap):
+				minimap.target_active = false
+				minimap.queue_redraw()
+			if is_instance_valid(status_label):
+				status_label.text = "INCENDIO CONTROLADO · Unidad disponible"
+	elif extinguishing and is_instance_valid(status_label):
+		status_label.text = "ACÉRCATE AL INCENDIO · %.0f m" % distance
 
 func _update_remote_network(delta: float) -> void:
 	if not has_node("/root/MultiplayerLobby") or not is_instance_valid(player):
@@ -1229,6 +1304,7 @@ func _create_hud() -> void:
 	_touch_button("LUCES", Vector2(-164, -132), Vector2(148, 52), func(): pass, Callable(), true)
 	_touch_button("CORRER", Vector2(-164, -190), Vector2(148, 52), func(): touch_run = true, func(): touch_run = false, true)
 	_touch_button("FRENO", Vector2(-164, -248), Vector2(148, 52), func(): touch_brake = true, func(): touch_brake = false, true)
+	_touch_button("MANGUERA", Vector2(-164, -306), Vector2(148, 52), func(): _toggle_extinguishing(), Callable(), true)
 
 func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size: Vector2, on_down: Callable, on_up: Callable, right_side := false) -> void:
 	var b := Button.new()
@@ -1305,7 +1381,7 @@ func _interact_vehicle() -> void:
 			camera_pivot.rotation = Vector3.ZERO
 			camera.position = Vector3(0,2.0,7.0)
 		else:
-			status_label.text = "Acércate al coche patrulla para entrar"
+			status_label.text = "Acércate al camión de bomberos para subir"
 
 func _physics_process(delta: float) -> void:
 	if not game_active:
@@ -1381,6 +1457,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		elif event.keycode == KEY_E:
 			_interact_vehicle()
+		elif event.keycode == KEY_F:
+			_toggle_extinguishing()
 		elif event.keycode == KEY_1:
 			_equip_weapon("ESCOPETA")
 		elif event.keycode == KEY_2:
@@ -1418,7 +1496,7 @@ func _toggle_pause_menu() -> void:
 	var popup := AcceptDialog.new()
 	popup.process_mode = Node.PROCESS_MODE_ALWAYS
 	popup.title = "Police Officer Simulator"
-	popup.dialog_text = "Juego pausado. Pulsa PAUSA para continuar."
+	popup.dialog_text = "Fire Department Simulator pausado. Pulsa PAUSA para continuar."
 	add_child(popup)
 	popup.popup_centered()
 	popup.confirmed.connect(func(): get_tree().paused = false; popup.queue_free())
