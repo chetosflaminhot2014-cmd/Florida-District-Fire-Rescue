@@ -854,7 +854,13 @@ func _make_person(female: bool, police: bool, role: String = "civilian") -> Node
 		imported_character_path = "res://assets/characters/firefighter.glb"
 	elif role == "ems":
 		imported_character_path = "res://assets/characters/paramedic.glb"
+	elif role == "civilian":
+		# Two compact CC0 GLBs give pedestrians visible model variety without adding
+		# tens of megabytes to the Android build. Keep the original OBJ as fallback.
+		imported_character_path = "res://assets/characters/civilian-female.glb" if rng.randi_range(0, 1) == 0 else "res://assets/characters/civilian-male.glb"
 	elif police or role == "sheriff":
+		# Keep the existing sheriff/officer mesh rather than falsely labeling a
+		# generic city-police uniform as a sheriff uniform.
 		model_path = "res://models/officer.obj"
 	var imported_character := false
 	if not imported_character_path.is_empty():
