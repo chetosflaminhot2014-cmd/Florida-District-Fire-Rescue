@@ -22,6 +22,7 @@ var driving := false
 var invert_camera := false
 var mouse_sensitivity := 0.002
 var move_speed := WALK_SPEED
+var vehicle_speed := 0.0
 var light_timer := 0.0
 var lights_red := true
 var red_light: ColorRect
@@ -728,6 +729,7 @@ func _interact_vehicle() -> void:
 		return
 	if driving:
 		driving = false
+		vehicle_speed = 0.0
 		player.visible = true
 		player.global_position = vehicle.global_position + vehicle.global_transform.basis.x * 2.0 + Vector3(0,0.1,0)
 		player.velocity = Vector3.ZERO
@@ -757,10 +759,16 @@ func _physics_process(delta: float) -> void:
 	if driving:
 		var throttle := -input_dir.y
 		var steer := input_dir.x
-		vehicle.rotate_y(-steer * delta * 1.2)
+		# Aceleración y frenado progresivos; el coche no cambia de velocidad instantáneamente.
+		var target_speed := throttle * 16.0
+		var acceleration := 9.0 if absf(throttle) > 0.01 else 5.0
+		vehicle_speed = move_toward(vehicle_speed, target_speed, acceleration * delta)
+		if absf(vehicle_speed) > 0.25:
+			var steering_factor := clampf(absf(vehicle_speed) / 5.0, 0.25, 1.0)
+			vehicle.rotate_y(-steer * delta * 1.35 * steering_factor * signf(vehicle_speed))
 		var forward := -vehicle.global_transform.basis.z
-		vehicle.velocity.x = forward.x * throttle * 18.0
-		vehicle.velocity.z = forward.z * throttle * 18.0
+		vehicle.velocity.x = forward.x * vehicle_speed
+		vehicle.velocity.z = forward.z * vehicle_speed
 		vehicle.velocity.y = 0
 		vehicle.move_and_slide()
 		vehicle.position.x = clampf(vehicle.position.x, -WORLD_LIMIT, WORLD_LIMIT)
