@@ -11,7 +11,7 @@ on:
       - "export_presets.cfg"
       - "*.glb"
       - "models/**"
-      - "assets/florida_city/**"
+      - "assets/**"
       - ".github/workflows/build-game.yml"
 
 permissions:
@@ -38,7 +38,6 @@ jobs:
             curl -L --fail --retry 3 "$BASE/building-type-$type.glb" -o "$ASSET_DIR/building-type-$type.glb"
           done
           curl -L --fail --retry 3 "$BASE/Textures/colormap.png" -o "$ASSET_DIR/Textures/colormap.png"
-          curl -L --fail --retry 3 "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/buildings/kenney-city-kit-suburban/License.txt" -o "$ASSET_DIR/License.txt"
           cat > "$ASSET_DIR/ASSET_LICENSES.md" <<'EOF'
           # Florida City Models — Asset Record
 
@@ -46,10 +45,43 @@ jobs:
           - Texture: Kenney colormap.png.
           - License: CC0 1.0 Universal, as stated by the original Kenney asset page and the included License.txt.
           - Original asset page: https://kenney.nl/assets/city-kit-suburban
-          - Mirror used by CI for reproducible downloads: https://github.com/petroulacl/fps-buildings-env-kit
-          - Godot format: glTF Binary (.glb), loaded by Godot 4 without an additional importer.
-          - Size: the eight GLB files total under 1 MB based on the mirror's published Git object sizes; the shared texture is about 12 KB.
-          - Visual note: these are optimized, textured, stylized low-poly buildings—not photorealistic scans. The game uses them as real mesh facades rather than generating building-shaped cubes.
+          - Godot format: GLB.
+          EOF
+          VEHICLE_DIR="assets/vehicles"
+          ROLE_DIR="assets/characters"
+          mkdir -p "$VEHICLE_DIR" "$ROLE_DIR"
+          VEHICLE_BASE="https://raw.githubusercontent.com/shorepine/kenney/main/3d/car"
+          for model in police ambulance firetruck sedan suv; do
+            curl -L --fail --retry 3 "$VEHICLE_BASE/$model.glb" -o "$VEHICLE_DIR/$model.glb"
+          done
+          curl -L --fail --retry 3 "https://www.innerscene.com/api/library/police-officer-standing-3d-person-emergency-services-9fd93114/download" -o "$ROLE_DIR/police-officer.glb"
+          curl -L --fail --retry 3 "https://www.innerscene.com/api/library/firefighter-standing-3d-person-emergency-services-3c007c1f/download" -o "$ROLE_DIR/firefighter.glb"
+          curl -L --fail --retry 3 "https://www.innerscene.com/api/library/drew-3d-person-paramedic-with-response-bag-c90b16a3/download" -o "$ROLE_DIR/paramedic.glb"
+          cat > "$ROLE_DIR/ASSET_LICENSES.md" <<'EOF'
+          # Emergency vehicles and personnel — Asset Record
+
+          ## Vehicles
+          - Files: police.glb, ambulance.glb, firetruck.glb, sedan.glb, suv.glb.
+          - Source: Kenney Car Kit, mirrored at https://github.com/shorepine/kenney/tree/main/3d/car
+          - License: CC0 1.0 Universal. Original pack page: https://kenney.nl/assets/car-kit
+          - Published model sizes: approximately 1.0 MB combined for these five GLBs.
+          - Style: optimized low-poly models, suitable for real-time use.
+
+          ## Personnel
+          - police-officer.glb: Innerscene, 16.0 MB, static mesh, approx. 123k triangles.
+          - firefighter.glb: Innerscene, 19.5 MB, static mesh, approx. 91k triangles.
+          - paramedic.glb: Innerscene, 14.5 MB, static mesh; source page reports real-world scale.
+          - License: CC0 public domain, as stated on each model's source page.
+          - Sources:
+            - https://www.innerscene.com/tools/library/3d-parts/police-officer-standing-3d-person-emergency-services-9fd93114
+            - https://www.innerscene.com/tools/library/3d-parts/firefighter-standing-3d-person-emergency-services-3c007c1f
+            - https://www.innerscene.com/tools/library/3d-parts/drew-3d-person-paramedic-with-response-bag-c90b16a3
+          - These people are static, non-rigged meshes; they do not contain walk animations.
+          - Existing project meshes models/civilian.obj and models/officer.obj remain in use for civilians and Sheriff's characters to keep APK and memory growth lower.
+          EOF
+          cat > "$ROLE_DIR/ASSET_SIZES.txt" <<'EOF'
+          Vehicle GLB sizes in the source mirror: police 195336 B; ambulance 233612 B; firetruck 232448 B; sedan 172216 B; suv 207572 B.
+          Personnel model sizes from the source pages: police officer 16.0 MB; firefighter 19.5 MB; paramedic 14.5 MB.
           EOF
       - name: Commit downloaded assets into the repository
         shell: bash
