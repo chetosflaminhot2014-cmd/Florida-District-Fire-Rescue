@@ -518,7 +518,7 @@ func _create_civilian_building(base_position: Vector3, building_color: Color) ->
 	else:
 		_box("BuildingRoof", Vector3(size_x + 0.5, 0.28, size_z + 0.5), base_position + Vector3(0, height + 0.14, 0), roof_color, false)
 	# Fachada con ventanas separadas, marcos y puerta reconocible.
-	var floors := max(1, int(height / 2.6))
+	var floors: int = maxi(1, int(height / 2.6))
 	for floor_index in range(floors):
 		for window_index in range(3):
 			var wx := -size_x * 0.32 + window_index * size_x * 0.32
