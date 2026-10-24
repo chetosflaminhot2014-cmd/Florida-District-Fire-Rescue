@@ -1,0 +1,47 @@
+newmtl uniform
+Ka 0.15 0.15 0.15
+Kd 0.180 0.380 0.580
+Ks 0.15 0.15 0.15
+Ns 24
+d 1.0
+illum 2
+
+newmtl pants
+Ka 0.15 0.15 0.15
+Kd 0.130 0.150 0.190
+Ks 0.15 0.15 0.15
+Ns 24
+d 1.0
+illum 2
+
+newmtl skin
+Ka 0.15 0.15 0.15
+Kd 0.660 0.430 0.310
+Ks 0.15 0.15 0.15
+Ns 24
+d 1.0
+illum 2
+
+newmtl shoes
+Ka 0.15 0.15 0.15
+Kd 0.025 0.025 0.030
+Ks 0.15 0.15 0.15
+Ns 24
+d 1.0
+illum 2
+
+newmtl hair
+Ka 0.15 0.15 0.15
+Kd 0.055 0.035 0.025
+Ks 0.15 0.15 0.15
+Ns 24
+d 1.0
+illum 2
+
+newmtl accent
+Ka 0.15 0.15 0.15
+Kd 0.120 0.140 0.160
+Ks 0.15 0.15 0.15
+Ns 24
+d 1.0
+illum 2
