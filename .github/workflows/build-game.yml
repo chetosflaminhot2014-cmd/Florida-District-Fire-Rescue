@@ -38,6 +38,17 @@ jobs:
             curl -L --fail --retry 3 "$BASE/building-type-$type.glb" -o "$ASSET_DIR/building-type-$type.glb"
           done
           curl -L --fail --retry 3 "$BASE/Textures/colormap.png" -o "$ASSET_DIR/Textures/colormap.png"
+          # Commercial district: low-poly mid-rises and skyscrapers from Kenney City Kit Commercial (CC0).
+          COMMERCIAL_DIR="$ASSET_DIR/commercial"
+          mkdir -p "$COMMERCIAL_DIR/Textures"
+          COMMERCIAL_BASE="https://raw.githubusercontent.com/bevyengine/bevy_asset_files/main/kenney/city-kit-commercial"
+          for type in a b c d f g h l m; do
+            curl -L --fail --retry 3 "$COMMERCIAL_BASE/building-$type.glb" -o "$COMMERCIAL_DIR/building-$type.glb"
+          done
+          for type in a b c d e; do
+            curl -L --fail --retry 3 "$COMMERCIAL_BASE/building-skyscraper-$type.glb" -o "$COMMERCIAL_DIR/building-skyscraper-$type.glb"
+          done
+          curl -L --fail --retry 3 "$COMMERCIAL_BASE/Textures/colormap.png" -o "$COMMERCIAL_DIR/Textures/colormap.png"
           cat > "$ASSET_DIR/ASSET_LICENSES.md" <<'EOF'
           # Florida City Models — Asset Record
 
@@ -46,6 +57,12 @@ jobs:
           - License: CC0 1.0 Universal, as stated by the original Kenney asset page and the included License.txt.
           - Original asset page: https://kenney.nl/assets/city-kit-suburban
           - Godot format: GLB.
+
+          ## Downtown commercial buildings
+          - Files: assets/florida_city/commercial/building-a/b/c/d/f/g/h/l/m.glb and building-skyscraper-a through building-skyscraper-e.glb.
+          - Source: Kenney City Kit (Commercial), mirrored at https://github.com/bevyengine/bevy_asset_files/tree/main/kenney/city-kit-commercial
+          - License: CC0 1.0 Universal. Original asset page: https://kenney.nl/assets/city-kit-commercial
+          - Texture: commercial/Textures/colormap.png.
           EOF
           VEHICLE_DIR="assets/vehicles"
           ROLE_DIR="assets/characters"
