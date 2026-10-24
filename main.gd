@@ -55,6 +55,24 @@ const FLORIDA_BUILDING_SCENES := [
 	"res://assets/florida_city/building-type-g.glb",
 	"res://assets/florida_city/building-type-h.glb"
 ]
+const FLORIDA_DOWNTOWN_SCENES := [
+	"res://assets/florida_city/commercial/building-a.glb",
+	"res://assets/florida_city/commercial/building-b.glb",
+	"res://assets/florida_city/commercial/building-c.glb",
+	"res://assets/florida_city/commercial/building-d.glb",
+	"res://assets/florida_city/commercial/building-f.glb",
+	"res://assets/florida_city/commercial/building-g.glb",
+	"res://assets/florida_city/commercial/building-h.glb",
+	"res://assets/florida_city/commercial/building-l.glb",
+	"res://assets/florida_city/commercial/building-m.glb"
+]
+const FLORIDA_SKYSCRAPER_SCENES := [
+	"res://assets/florida_city/commercial/building-skyscraper-a.glb",
+	"res://assets/florida_city/commercial/building-skyscraper-b.glb",
+	"res://assets/florida_city/commercial/building-skyscraper-c.glb",
+	"res://assets/florida_city/commercial/building-skyscraper-d.glb",
+	"res://assets/florida_city/commercial/building-skyscraper-e.glb"
+]
 
 var menu_layer: CanvasLayer
 var menu_panel: VBoxContainer
@@ -552,10 +570,14 @@ func _create_city_blocks() -> void:
 			elif x == 45.0 and z == -45.0: civic_name = "MEDICAL CENTER"
 			elif x == 45.0 and z == 45.0: civic_name = "FIRE DEPARTMENT"
 			elif x == -75.0 and z == 45.0: civic_name = "PUBLIC LIBRARY"
+			var block_position := Vector3(x, 0, z)
 			if not civic_name.is_empty():
-				_create_civic_building(civic_name, Vector3(x, 0, z))
+				_create_civic_building(civic_name, block_position)
+			elif absf(x) <= 45.0 and absf(z) <= 45.0:
+				# A distinct downtown skyline replaces the repeated suburban houses in the central district.
+				_create_downtown_building(block_position)
 			else:
-				_create_civilian_building(Vector3(x, 0, z), colors[rng.randi_range(0, colors.size()-1)])
+				_create_civilian_building(block_position, colors[rng.randi_range(0, colors.size()-1)])
 
 func _create_civic_building(building_type: String, base_position: Vector3) -> void:
 	var target_size := Vector3(13.0, 7.5, 11.0)
@@ -591,10 +613,26 @@ func _create_civilian_building(base_position: Vector3, building_color: Color) ->
 		push_error("No se encontró el modelo 3D de ciudad: assets/florida_city.")
 		return
 
+func _create_downtown_building(base_position: Vector3) -> void:
+	var coordinate_seed := absi(hash(str(int(base_position.x)) + ":" + str(int(base_position.z))))
+	var is_tower := coordinate_seed % 3 == 0
+	var model_list: Array = FLORIDA_SKYSCRAPER_SCENES if is_tower else FLORIDA_DOWNTOWN_SCENES
+	var variant := coordinate_seed % model_list.size()
+	var target_size := Vector3(13.0, rng.randf_range(13.0, 21.0), 11.0)
+	if is_tower:
+		target_size = Vector3(13.0, rng.randf_range(23.0, 34.0), 13.0)
+	var asset_path: String = model_list[variant]
+	if not _try_create_building_from_path(asset_path, base_position, target_size, "Downtown_" + str(int(base_position.x)) + "_" + str(int(base_position.z))):
+		# Missing optional commercial assets should not leave an empty city block.
+		_create_civilian_building(base_position, Color(0.42, 0.46, 0.5))
+
 func _try_create_asset_building(base_position: Vector3, target_size: Vector3, variant: int, node_name: String) -> bool:
 	if FLORIDA_BUILDING_SCENES.is_empty():
 		return false
 	var asset_path: String = FLORIDA_BUILDING_SCENES[posmod(variant, FLORIDA_BUILDING_SCENES.size())]
+	return _try_create_building_from_path(asset_path, base_position, target_size, node_name)
+
+func _try_create_building_from_path(asset_path: String, base_position: Vector3, target_size: Vector3, node_name: String) -> bool:
 	var packed_scene := load(asset_path) as PackedScene
 	if packed_scene == null:
 		return false
