@@ -569,8 +569,8 @@ func _create_street_furniture() -> void:
 	for ix in [-30.0, 0.0, 30.0]:
 		for iz in [-30.0, 0.0, 30.0]:
 			for side in [-1.0, 1.0]:
-				var px := ix + side * 8.0
-				var pz := iz - side * 8.0
+				var px: float = ix + side * 8.0
+				var pz: float = iz - side * 8.0
 				_box("TrafficSignalPole", Vector3(0.14, 3.8, 0.14), Vector3(px, 1.9, pz), Color(0.12, 0.13, 0.14), false)
 				_box("TrafficSignalHousing", Vector3(0.42, 0.95, 0.32), Vector3(px, 3.65, pz), Color(0.055, 0.06, 0.065), false)
 				_sphere("SignalRed", Vector3(px, 3.94, pz - 0.18), 0.105, Color(0.9, 0.035, 0.025))
