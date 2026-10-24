@@ -87,6 +87,8 @@ var dispatch_layer: CanvasLayer
 var dispatch_marker: MeshInstance3D
 var multiplayer_ip_input: LineEdit
 var multiplayer_name_input: LineEdit
+var shared_materials: Dictionary = {}
+var player_anim_clock := 0.0
 
 func _ready() -> void:
 	rng.randomize()
@@ -172,7 +174,7 @@ func _process(delta: float) -> void:
 		minimap.target_active = dispatch_target_active
 		minimap.queue_redraw()
 	if is_instance_valid(status_label):
-		status_label.text = ("CONDUCIENDO — WASD / controles táctiles" if driving else "A PIE — WASD para moverte · E para usar el vehículo") + "   |   NPC: " + str(npc_nodes.size())
+		status_label.text = ("PATRULLA — WASD / controles táctiles" if driving else "AGENTE A PIE — WASD · E para subir/bajar") + "   |   NPC: " + str(npc_nodes.size())
 
 func _create_menu() -> void:
 	menu_layer = CanvasLayer.new()
@@ -461,7 +463,7 @@ func _start_game(female: bool) -> void:
 	_create_vehicle()
 	_create_second_patrol()
 	_create_service_vehicles()
-	_create_npcs(18)
+	_create_npcs(10 if OS.has_feature("mobile") else 14)
 	_create_hud()
 	_create_dispatch_system()
 	for peer_id in MultiplayerLobby.remote_states.keys():
@@ -573,6 +575,10 @@ func _create_civilian_building(base_position: Vector3, building_color: Color) ->
 	var size_x := rng.randf_range(9.0, 14.0)
 	var size_z := rng.randf_range(9.0, 14.0)
 	var style := rng.randi_range(0, 2)
+	if absf(base_position.x) <= 45.0 and absf(base_position.z) <= 45.0 and style == 2:
+		height = rng.randf_range(14.0, 21.0)
+		size_x = rng.randf_range(10.0, 13.5)
+		size_z = rng.randf_range(10.0, 13.5)
 	if style == 0:
 		height = rng.randf_range(4.0, 6.0)
 		size_x = rng.randf_range(8.0, 10.0)
@@ -643,6 +649,49 @@ func _create_trees() -> void:
 		_box("TreeTrunk", Vector3(0.45, 2.2, 0.45), Vector3(x, 1.1, z), Color(0.25, 0.15, 0.09), false)
 		_sphere("TreeCanopy", Vector3(x, 2.9, z), 1.5, Color(0.12, 0.32, 0.16))
 
+
+func _fit_imported_model(model: Node3D, target_size: Vector3) -> void:
+	var bounds := _get_model_local_bounds(model)
+	if bounds.size.x <= 0.001 or bounds.size.y <= 0.001 or bounds.size.z <= 0.001:
+		model.position.y = 0.05
+		return
+	var factor := minf(target_size.x / bounds.size.x, minf(target_size.y / bounds.size.y, target_size.z / bounds.size.z))
+	if not is_finite(factor) or factor <= 0.0:
+		model.position.y = 0.05
+		return
+	model.scale = Vector3.ONE * factor
+	model.position.y = -bounds.position.y * factor + 0.05
+
+func _get_model_local_bounds(model: Node3D) -> AABB:
+	var combined := AABB()
+	var found := false
+	var pending: Array[Node] = [model]
+	while not pending.is_empty():
+		var node: Node = pending.pop_back()
+		if node is MeshInstance3D:
+			var mesh_node := node as MeshInstance3D
+			if mesh_node.mesh != null:
+				var relative_transform := model.global_transform.affine_inverse() * mesh_node.global_transform
+				var mesh_bounds: AABB = relative_transform * mesh_node.get_aabb()
+				if not found:
+					combined = mesh_bounds
+					found = true
+				else:
+					combined = combined.merge(mesh_bounds)
+		for child in node.get_children():
+			pending.append(child)
+	return combined
+
+func _shared_material(color: Color, roughness := 0.9) -> StandardMaterial3D:
+	var key := color.to_html(true) + ":" + str(roughness)
+	if shared_materials.has(key):
+		return shared_materials[key] as StandardMaterial3D
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = roughness
+	shared_materials[key] = material
+	return material
+
 func _box(node_name: String, box_size: Vector3, pos: Vector3, color: Color, collision: bool) -> Node3D:
 	var root: Node3D
 	if collision:
@@ -664,10 +713,7 @@ func _box(node_name: String, box_size: Vector3, pos: Vector3, color: Color, coll
 	var mesh := BoxMesh.new()
 	mesh.size = box_size
 	mesh_node.mesh = mesh
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = color
-	mat.roughness = 0.9
-	mesh_node.material_override = mat
+	mesh_node.material_override = _shared_material(color, 0.9)
 	root.add_child(mesh_node)
 	return root
 
@@ -678,9 +724,7 @@ func _sphere(node_name: String, pos: Vector3, radius: float, color: Color) -> Me
 	mesh.radius = radius
 	mesh.height = radius * 2.0
 	node.mesh = mesh
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = color
-	node.material_override = mat
+	node.material_override = _shared_material(color, 0.9)
 	node.position = pos
 	game_world.add_child(node)
 	return node
@@ -712,7 +756,7 @@ func _equip_weapon(weapon_name: String) -> void:
 func _create_player(female: bool) -> void:
 	player = CharacterBody3D.new()
 	player.name = "Player"
-	player.position = Vector3(0, 0.2, 9)
+	player.position = Vector3(-17.0, 0.08, 6.0)
 	game_world.add_child(player)
 	var collider := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
@@ -721,8 +765,10 @@ func _create_player(female: bool) -> void:
 	collider.shape = capsule
 	collider.position.y = 0.9
 	player.add_child(collider)
-	player_visual = _make_female_player_model()
-	player_visual.name = "PlayerOfficer"
+	# Use the male officer OBJ already included in the project; the previous GLB pivot clipped the character.
+	player_visual = _make_person(false, true, "sheriff")
+	player_visual.name = "PlayerOfficer_Male"
+	player_visual.scale = Vector3(0.86, 0.86, 0.86)
 	player_visual.position.y = 0.0
 	player.add_child(player_visual)
 	_setup_player_animations(player_visual)
@@ -836,10 +882,7 @@ func _add_person_capsule(parent: Node3D, pos: Vector3, radius: float, height: fl
 	mesh.radius = radius
 	mesh.height = maxf(height, radius * 2.0)
 	mesh_node.mesh = mesh
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	material.roughness = 0.82
-	mesh_node.material_override = material
+	mesh_node.material_override = _shared_material(color, 0.82)
 	mesh_node.position = pos
 	mesh_node.rotation_degrees = angles
 	parent.add_child(mesh_node)
@@ -850,9 +893,7 @@ func _add_person_box(parent: Node3D, size: Vector3, pos: Vector3, color: Color) 
 	var mesh := BoxMesh.new()
 	mesh.size = size
 	m.mesh = mesh
-	var material := StandardMaterial3D.new()
-	material.albedo_color = color
-	m.material_override = material
+	m.material_override = _shared_material(color, 0.9)
 	m.position = pos
 	parent.add_child(m)
 	return m
@@ -873,7 +914,7 @@ func _create_vehicle() -> void:
 	# Única patrulla jugable: modelo GLB aportado al proyecto.
 	vehicle = CharacterBody3D.new()
 	vehicle.name = "PatrolCar_LAPD_Model"
-	vehicle.position = Vector3(-20, 0.35, 3)
+	vehicle.position = Vector3(-20, 0.0, 3)
 	vehicle.floor_snap_length = 0.2
 	game_world.add_child(vehicle)
 
@@ -882,7 +923,7 @@ func _create_vehicle() -> void:
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(2.0, 1.25, 4.5)
 	shape_node.shape = shape
-	shape_node.position.y = 0.68
+	shape_node.position.y = 0.63
 	vehicle.add_child(shape_node)
 
 	var patrol_scene := load("res://los_angeles_police_department_car.glb") as PackedScene
@@ -891,8 +932,8 @@ func _create_vehicle() -> void:
 		patrol_visual.name = "PatrolCarModel"
 		if patrol_visual is Node3D:
 			patrol_visual.position = Vector3.ZERO
-			patrol_visual.scale = Vector3.ONE
 		vehicle.add_child(patrol_visual)
+		_fit_imported_model(patrol_visual, Vector3(2.05, 1.55, 4.35))
 	else:
 		push_error("No se pudo cargar res://los_angeles_police_department_car.glb")
 
@@ -906,7 +947,7 @@ func _create_second_patrol() -> void:
 	# Segunda patrulla estacionada; la primera conserva el sistema de conducción actual.
 	var parked_patrol := StaticBody3D.new()
 	parked_patrol.name = "PatrolCar_RCMP_FordExplorer"
-	parked_patrol.position = Vector3(-29.0, 0.35, 3.0)
+	parked_patrol.position = Vector3(-29.0, 0.0, 3.0)
 	game_world.add_child(parked_patrol)
 
 	var shape_node := CollisionShape3D.new()
@@ -923,6 +964,7 @@ func _create_second_patrol() -> void:
 		if patrol_visual is Node3D:
 			patrol_visual.position = Vector3.ZERO
 		parked_patrol.add_child(patrol_visual)
+		_fit_imported_model(patrol_visual, Vector3(2.2, 1.6, 4.8))
 	else:
 		push_error("No se pudo cargar res://rcmp_ford_explorer.glb")
 
@@ -1094,8 +1136,6 @@ func _create_hud() -> void:
 	_touch_button("LUCES", Vector2(-164, -132), Vector2(148, 52), func(): pass, Callable(), true)
 	_touch_button("CORRER", Vector2(-164, -190), Vector2(148, 52), func(): touch_run = true, func(): touch_run = false, true)
 	_touch_button("FRENO", Vector2(-164, -248), Vector2(148, 52), func(): touch_brake = true, func(): touch_brake = false, true)
-	_touch_button("ESCOPETA", Vector2(-164, -306), Vector2(148, 48), func(): _equip_weapon("ESCOPETA"), Callable(), true)
-	_touch_button("RIFLE", Vector2(-164, -360), Vector2(148, 46), func(): _equip_weapon("RIFLE"), Callable(), true)
 
 func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size: Vector2, on_down: Callable, on_up: Callable, right_side := false) -> void:
 	var b := Button.new()
@@ -1115,7 +1155,23 @@ func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size
 	b.anchor_bottom = 1.0
 	b.offset_top = bottom_right_offset.y
 	b.offset_bottom = bottom_right_offset.y + button_size.y
-	b.modulate = Color(0.78, 0.88, 1.0, 0.86)
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_size_override("font_size", 15 if button_size.x > 80.0 else 22)
+	var normal_style := StyleBoxFlat.new()
+	normal_style.bg_color = Color(0.025, 0.075, 0.12, 0.90)
+	normal_style.border_color = Color(0.18, 0.55, 0.78, 0.95)
+	normal_style.set_border_width_all(2)
+	normal_style.set_corner_radius_all(12)
+	var pressed_style := StyleBoxFlat.new()
+	pressed_style.bg_color = Color(0.08, 0.28, 0.42, 0.98)
+	pressed_style.border_color = Color(0.35, 0.82, 1.0, 1.0)
+	pressed_style.set_border_width_all(2)
+	pressed_style.set_corner_radius_all(12)
+	b.add_theme_stylebox_override("normal", normal_style)
+	b.add_theme_stylebox_override("hover", normal_style)
+	b.add_theme_stylebox_override("pressed", pressed_style)
+	b.add_theme_color_override("font_color", Color(0.91, 0.97, 1.0))
+	b.add_theme_color_override("font_pressed_color", Color(1.0, 1.0, 1.0))
 	hud_layer.add_child(b)
 	b.button_down.connect(on_down)
 	if on_up.is_valid():
@@ -1201,12 +1257,15 @@ func _physics_process(delta: float) -> void:
 	player.position.x = clampf(player.position.x, -WORLD_LIMIT, WORLD_LIMIT)
 	player.position.z = clampf(player.position.z, -WORLD_LIMIT, WORLD_LIMIT)
 	var planar_speed := Vector2(player.velocity.x, player.velocity.z).length()
-	if planar_speed < 0.2:
-		_play_player_animation("idle")
-	elif speed > WALK_SPEED:
-		_play_player_animation("run")
-	else:
-		_play_player_animation("walk")
+	# The included male OBJ is unrigged, so use subtle procedural movement instead of a missing AnimationPlayer.
+	if is_instance_valid(player_visual):
+		if planar_speed < 0.2:
+			player_visual.position.y = move_toward(player_visual.position.y, 0.0, delta * 0.8)
+			player_visual.rotation.z = move_toward(player_visual.rotation.z, 0.0, delta * 1.8)
+		else:
+			player_anim_clock += delta * (11.0 if speed > WALK_SPEED else 7.5)
+			player_visual.position.y = absf(sin(player_anim_clock * 2.0)) * (0.035 if speed > WALK_SPEED else 0.018)
+			player_visual.rotation.z = sin(player_anim_clock) * (0.035 if speed > WALK_SPEED else 0.02)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not game_active:
