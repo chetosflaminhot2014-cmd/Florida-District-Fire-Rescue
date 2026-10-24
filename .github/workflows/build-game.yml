@@ -11,19 +11,70 @@ on:
       - "export_presets.cfg"
       - "*.glb"
       - "models/**"
+      - "assets/florida_city/**"
       - ".github/workflows/build-game.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  prepare-city-assets:
+    name: Import CC0 Florida city models
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Download compact textured building models
+        shell: bash
+        run: |
+          set -euo pipefail
+          ASSET_DIR="assets/florida_city"
+          mkdir -p "$ASSET_DIR/Textures"
+          BASE="https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/buildings/kenney-city-kit-suburban/Models/GLB%20format"
+          for type in a b c d e f g h; do
+            curl -L --fail --retry 3 "$BASE/building-type-$type.glb" -o "$ASSET_DIR/building-type-$type.glb"
+          done
+          curl -L --fail --retry 3 "$BASE/Textures/colormap.png" -o "$ASSET_DIR/Textures/colormap.png"
+          curl -L --fail --retry 3 "https://raw.githubusercontent.com/petroulacl/fps-buildings-env-kit/main/buildings/kenney-city-kit-suburban/License.txt" -o "$ASSET_DIR/License.txt"
+          cat > "$ASSET_DIR/ASSET_LICENSES.md" <<'EOF'
+          # Florida City Models — Asset Record
+
+          - Models: Kenney City Kit (Suburban), selected GLB models building-type-a through building-type-h.
+          - Texture: Kenney colormap.png.
+          - License: CC0 1.0 Universal, as stated by the original Kenney asset page and the included License.txt.
+          - Original asset page: https://kenney.nl/assets/city-kit-suburban
+          - Mirror used by CI for reproducible downloads: https://github.com/petroulacl/fps-buildings-env-kit
+          - Godot format: glTF Binary (.glb), loaded by Godot 4 without an additional importer.
+          - Size: the eight GLB files total under 1 MB based on the mirror's published Git object sizes; the shared texture is about 12 KB.
+          - Visual note: these are optimized, textured, stylized low-poly buildings—not photorealistic scans. The game uses them as real mesh facades rather than generating building-shaped cubes.
+          EOF
+      - name: Commit downloaded assets into the repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/florida_city
+          if git diff --cached --quiet; then
+            echo "Florida city assets are already present."
+          else
+            git commit -m "Add CC0 textured Florida city building models"
+            git push origin HEAD:main
+          fi
+
   windows:
+    needs: prepare-city-assets
     name: Export Windows PC build
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
-      - name: Checkout
+      - name: Checkout latest main (includes imported city assets)
         uses: actions/checkout@v4
+        with:
+          ref: main
       - name: Download Godot 4.7.2 and export templates
         shell: bash
         run: |
@@ -65,11 +116,14 @@ jobs:
 
   android:
     name: Export Android APK
+    needs: prepare-city-assets
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     steps:
-      - name: Checkout
+      - name: Checkout latest main (includes imported city assets)
         uses: actions/checkout@v4
+        with:
+          ref: main
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
