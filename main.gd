@@ -72,25 +72,99 @@ func _create_menu() -> void:
 	menu_layer.name = "MenuLayer"
 	add_child(menu_layer)
 	var background := ColorRect.new()
-	background.color = Color(0.012, 0.022, 0.045)
+	background.color = Color(0.018, 0.035, 0.065)
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu_layer.add_child(background)
-	var glow := ColorRect.new()
-	glow.anchor_left = 0.0
-	glow.anchor_right = 1.0
-	glow.anchor_top = 0.35
-	glow.anchor_bottom = 0.9
-	glow.color = Color(0.035, 0.12, 0.28, 0.55)
-	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	menu_layer.add_child(glow)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	menu_layer.add_child(center)
+	# Modern police-simulator landing screen: navigation on the left, operations panel on the right.
+	var upper_glow := ColorRect.new()
+	upper_glow.anchor_left = 0.42
+	upper_glow.anchor_right = 1.0
+	upper_glow.anchor_top = 0.0
+	upper_glow.anchor_bottom = 1.0
+	upper_glow.color = Color(0.025, 0.09, 0.16, 0.92)
+	upper_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	menu_layer.add_child(upper_glow)
+	var accent := ColorRect.new()
+	accent.anchor_left = 0.435
+	accent.anchor_right = 0.442
+	accent.anchor_top = 0.0
+	accent.anchor_bottom = 1.0
+	accent.color = Color(0.12, 0.55, 0.9)
+	accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	menu_layer.add_child(accent)
+	var right_panel := PanelContainer.new()
+	right_panel.anchor_left = 0.49
+	right_panel.anchor_right = 0.95
+	right_panel.anchor_top = 0.15
+	right_panel.anchor_bottom = 0.84
+	right_panel.offset_left = 0
+	right_panel.offset_right = 0
+	right_panel.offset_top = 0
+	right_panel.offset_bottom = 0
+	var card_style := StyleBoxFlat.new()
+	card_style.bg_color = Color(0.025, 0.055, 0.09, 0.9)
+	card_style.border_color = Color(0.12, 0.3, 0.45)
+	card_style.set_border_width_all(1)
+	card_style.set_corner_radius_all(12)
+	right_panel.add_theme_stylebox_override("panel", card_style)
+	menu_layer.add_child(right_panel)
+	var info := VBoxContainer.new()
+	info.add_theme_constant_override("separation", 16)
+	right_panel.add_child(info)
+	var status := Label.new()
+	status.text = "MIRAGE HILLS  /  PATROL DIVISION"
+	status.add_theme_font_size_override("font_size", 13)
+	status.add_theme_color_override("font_color", Color(0.35, 0.72, 1.0))
+	info.add_child(status)
+	var scene_title := Label.new()
+	scene_title.text = "YOUR CITY.\nYOUR SHIFT."
+	scene_title.add_theme_font_size_override("font_size", 34)
+	scene_title.add_theme_color_override("font_color", Color(0.92, 0.96, 1.0))
+	info.add_child(scene_title)
+	var divider := ColorRect.new()
+	divider.custom_minimum_size = Vector2(0, 2)
+	divider.color = Color(0.13, 0.49, 0.78)
+	info.add_child(divider)
+	var description := Label.new()
+	description.text = "Respond to calls, patrol the streets,\nand work together as one unit."
+	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	description.add_theme_font_size_override("font_size", 17)
+	description.add_theme_color_override("font_color", Color(0.68, 0.76, 0.84))
+	info.add_child(description)
+	var feature_gap := Control.new()
+	feature_gap.custom_minimum_size.y = 18
+	info.add_child(feature_gap)
+	for feature in ["01  OPEN-WORLD CITY", "02  EMERGENCY DISPATCH", "03  MULTIPLAYER PATROL"]:
+		var feature_label := Label.new()
+		feature_label.text = feature
+		feature_label.add_theme_font_size_override("font_size", 14)
+		feature_label.add_theme_color_override("font_color", Color(0.8, 0.87, 0.94))
+		info.add_child(feature_label)
+	var footer := Label.new()
+	footer.anchor_left = 0.49
+	footer.anchor_right = 0.95
+	footer.anchor_top = 0.88
+	footer.anchor_bottom = 0.96
+	footer.text = "EARLY ACCESS  •  GODOT ENGINE  •  MIRAGE HILLS"
+	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	footer.add_theme_font_size_override("font_size", 10)
+	footer.add_theme_color_override("font_color", Color(0.38, 0.5, 0.62))
+	menu_layer.add_child(footer)
+	var left_area := Control.new()
+	left_area.anchor_left = 0.045
+	left_area.anchor_right = 0.405
+	left_area.anchor_top = 0.06
+	left_area.anchor_bottom = 0.94
+	menu_layer.add_child(left_area)
+	var left_center := CenterContainer.new()
+	left_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	left_area.add_child(left_center)
 	menu_panel = VBoxContainer.new()
-	menu_panel.custom_minimum_size = Vector2(310, 0)
-	menu_panel.add_theme_constant_override("separation", 12)
-	center.add_child(menu_panel)
+	menu_panel.custom_minimum_size = Vector2(0, 0)
+	menu_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	menu_panel.add_theme_constant_override("separation", 11)
+	left_center.add_child(menu_panel)
 	_show_main_menu()
 
 func _clear_menu() -> void:
@@ -101,50 +175,53 @@ func _clear_menu() -> void:
 	blue_light = null
 
 func _add_title() -> void:
-	var lights := HBoxContainer.new()
-	lights.alignment = BoxContainer.ALIGNMENT_CENTER
-	lights.add_theme_constant_override("separation", 16)
-	menu_panel.add_child(lights)
-	red_light = ColorRect.new()
-	red_light.custom_minimum_size = Vector2(68, 10)
-	red_light.color = Color.RED
-	lights.add_child(red_light)
-	blue_light = ColorRect.new()
-	blue_light.custom_minimum_size = Vector2(68, 10)
-	blue_light.color = Color.BLUE
-	lights.add_child(blue_light)
+	var emblem := PanelContainer.new()
+	emblem.custom_minimum_size = Vector2(62, 62)
+	emblem.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	var emblem_style := StyleBoxFlat.new()
+	emblem_style.bg_color = Color(0.06, 0.17, 0.29)
+	emblem_style.border_color = Color(0.16, 0.55, 0.88)
+	emblem_style.set_border_width_all(2)
+	emblem_style.set_corner_radius_all(12)
+	emblem.add_theme_stylebox_override("panel", emblem_style)
+	menu_panel.add_child(emblem)
+	var badge_label := Label.new()
+	badge_label.text = "MH\nPD"
+	badge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	badge_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	badge_label.add_theme_font_size_override("font_size", 19)
+	badge_label.add_theme_color_override("font_color", Color(0.82, 0.92, 1.0))
+	emblem.add_child(badge_label)
 	var title := Label.new()
 	title.text = "POLICE OFFICER\nSIMULATOR"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 31)
-	title.add_theme_color_override("font_color", Color.WHITE)
+	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_color_override("font_color", Color(0.95, 0.97, 1.0))
 	menu_panel.add_child(title)
 	var subtitle := Label.new()
 	subtitle.text = "MIRAGE HILLS POLICE DEPARTMENT"
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.add_theme_font_size_override("font_size", 10)
-	subtitle.add_theme_color_override("font_color", Color(0.55, 0.72, 0.95))
+	subtitle.add_theme_color_override("font_color", Color(0.32, 0.67, 0.94))
 	menu_panel.add_child(subtitle)
 	var gap := Control.new()
-	gap.custom_minimum_size.y = 12
+	gap.custom_minimum_size.y = 14
 	menu_panel.add_child(gap)
 
 func _add_button(text_value: String, callback: Callable) -> Button:
 	var button := Button.new()
 	button.text = text_value
-	button.custom_minimum_size = Vector2(290, 48)
-	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	button.custom_minimum_size = Vector2(250, 48)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.add_theme_font_size_override("font_size", 16)
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.045, 0.09, 0.16)
-	normal.border_color = Color(0.15, 0.38, 0.72)
+	normal.bg_color = Color(0.045, 0.085, 0.13)
+	normal.border_color = Color(0.12, 0.25, 0.37)
 	normal.set_border_width_all(1)
-	normal.set_corner_radius_all(5)
+	normal.set_corner_radius_all(7)
 	var hover := StyleBoxFlat.new()
-	hover.bg_color = Color(0.09, 0.19, 0.32)
-	hover.border_color = Color(0.3, 0.58, 1.0)
+	hover.bg_color = Color(0.06, 0.22, 0.36)
+	hover.border_color = Color(0.16, 0.62, 0.96)
 	hover.set_border_width_all(1)
-	hover.set_corner_radius_all(5)
+	hover.set_corner_radius_all(7)
 	button.add_theme_stylebox_override("normal", normal)
 	button.add_theme_stylebox_override("hover", hover)
 	button.add_theme_color_override("font_color", Color.WHITE)
