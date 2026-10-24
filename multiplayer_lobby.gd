@@ -62,6 +62,7 @@ func _submit_player_state(position: Vector3, rotation_y: float) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender := multiplayer.get_remote_sender_id()
+	_receive_player_state(sender, position, rotation_y)
 	_receive_player_state.rpc(sender, position, rotation_y)
 
 @rpc("authority", "call_remote", "unreliable")
@@ -74,6 +75,7 @@ func _submit_dispatch(message: String, location: Vector3) -> void:
 	if not multiplayer.is_server():
 		return
 	var safe_message := message.left(180)
+	_dispatch_broadcast(safe_message, location)
 	_dispatch_broadcast.rpc(safe_message, location)
 
 @rpc("authority", "call_remote", "reliable")
