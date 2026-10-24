@@ -1256,6 +1256,7 @@ func _interact_vehicle() -> void:
 		player.velocity = Vector3.ZERO
 		camera_pivot.reparent(player)
 		camera_pivot.position = Vector3(0,1.55,0)
+		camera_pivot.rotation = Vector3.ZERO
 		camera.position = Vector3(0,1.0,5.5)
 	else:
 		if player.global_position.distance_to(vehicle.global_position) <= 5.0:
@@ -1263,6 +1264,7 @@ func _interact_vehicle() -> void:
 			player.visible = false
 			camera_pivot.reparent(vehicle)
 			camera_pivot.position = Vector3(0,2.0,0)
+			camera_pivot.rotation = Vector3.ZERO
 			camera.position = Vector3(0,2.0,7.0)
 		else:
 			status_label.text = "Acércate al coche patrulla para entrar"
