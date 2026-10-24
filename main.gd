@@ -1,5 +1,38 @@
 extends Node3D
 
+class MinimapControl extends Control:
+	var player_world_position := Vector3.ZERO
+	var target_world_position := Vector3.ZERO
+	var target_active := false
+	var world_limit := 92.0
+
+	func _draw() -> void:
+		var area := Rect2(Vector2.ZERO, size)
+		draw_rect(area, Color(0.025, 0.055, 0.075, 0.94), true)
+		draw_rect(area, Color(0.25, 0.68, 0.85, 0.95), false, 2.0)
+		var pad := 12.0
+		var map_size := size - Vector2(pad * 2.0, pad * 2.0)
+		for i in range(1, 6):
+			var x := pad + map_size.x * float(i) / 6.0
+			var y := pad + map_size.y * float(i) / 6.0
+			draw_line(Vector2(x, pad), Vector2(x, size.y - pad), Color(0.18, 0.28, 0.32, 0.8), 3.0)
+			draw_line(Vector2(pad, y), Vector2(size.x - pad, y), Color(0.18, 0.28, 0.32, 0.8), 3.0)
+		var player_point := _map_point(player_world_position, pad, map_size)
+		if target_active:
+			var target_point := _map_point(target_world_position, pad, map_size)
+			draw_line(player_point, target_point, Color(1.0, 0.68, 0.12, 0.9), 2.0)
+			draw_circle(target_point, 7.0, Color(1.0, 0.55, 0.08))
+			draw_arc(target_point, 11.0, 0.0, TAU, 24, Color(1.0, 0.72, 0.2), 2.0)
+		draw_circle(player_point, 6.0, Color(0.15, 0.8, 1.0))
+		draw_arc(player_point, 10.0, 0.0, TAU, 24, Color(0.65, 0.92, 1.0), 2.0)
+		draw_string(ThemeDB.fallback_font, Vector2(9, 18), "MAPA", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.88, 0.96, 1.0))
+
+	func _map_point(world_position: Vector3, pad: float, map_size: Vector2) -> Vector2:
+		return Vector2(
+			pad + clampf((world_position.x + world_limit) / (world_limit * 2.0), 0.0, 1.0) * map_size.x,
+			pad + clampf((world_position.z + world_limit) / (world_limit * 2.0), 0.0, 1.0) * map_size.y
+		)
+
 # Police Officer Simulator — lightweight procedural prototype for PC and Android.
 # No external assets are required; missing officer models are replaced by generated characters.
 
@@ -24,6 +57,9 @@ var equipped_weapon_instance: Node3D
 const WEAPON_SCENES := {"ESCOPETA": "res://remington_870_shotgun.glb", "RIFLE": "res://lr-300_ml-a_assault_rifle.glb"}
 var hud_layer: CanvasLayer
 var status_label: Label
+var minimap: MinimapControl
+var dispatch_target_position := Vector3.ZERO
+var dispatch_target_active := false
 var game_active := false
 var driving := false
 var invert_camera := false
@@ -129,6 +165,12 @@ func _process(delta: float) -> void:
 		return
 	_update_npcs(delta)
 	_update_remote_network(delta)
+	if is_instance_valid(minimap):
+		var tracked_position := vehicle.global_position if driving and is_instance_valid(vehicle) else (player.global_position if is_instance_valid(player) else Vector3.ZERO)
+		minimap.player_world_position = tracked_position
+		minimap.target_world_position = dispatch_target_position
+		minimap.target_active = dispatch_target_active
+		minimap.queue_redraw()
 	if is_instance_valid(status_label):
 		status_label.text = ("CONDUCIENDO — WASD / controles táctiles" if driving else "A PIE — WASD para moverte · E para usar el vehículo") + "   |   NPC: " + str(npc_nodes.size())
 
@@ -938,6 +980,12 @@ func _create_dispatch_system() -> void:
 	dispatch_layer.call_accepted.connect(_on_dispatch_call_accepted)
 
 func _on_dispatch_call_accepted(location: Vector3, description: String) -> void:
+	dispatch_target_position = location
+	dispatch_target_active = true
+	if is_instance_valid(minimap):
+		minimap.target_world_position = location
+		minimap.target_active = true
+		minimap.queue_redraw()
 	if is_instance_valid(dispatch_marker):
 		dispatch_marker.queue_free()
 	dispatch_marker = MeshInstance3D.new()
@@ -1014,6 +1062,19 @@ func _create_hud() -> void:
 	status_label.text = "A PIE — WASD para moverte"
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	top.add_child(status_label)
+	minimap = MinimapControl.new()
+	minimap.name = "Minimapa"
+	minimap.custom_minimum_size = Vector2(210, 170)
+	minimap.anchor_left = 1.0
+	minimap.anchor_right = 1.0
+	minimap.anchor_top = 0.12
+	minimap.anchor_bottom = 0.12
+	minimap.offset_left = -226
+	minimap.offset_right = -16
+	minimap.offset_top = 104
+	minimap.offset_bottom = 274
+	minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud_layer.add_child(minimap)
 	var pause := Button.new()
 	pause.text = "PAUSA"
 	pause.anchor_left = 1.0
