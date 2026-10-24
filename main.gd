@@ -546,14 +546,14 @@ func _create_crosswalks() -> void:
 		_box("RoadEdgeLine", Vector3(0.12, 0.025, 200), Vector3(street + 6.0, 0.065, 0), Color(0.82, 0.84, 0.83), false)
 		_box("RoadEdgeLine", Vector3(200, 0.025, 0.12), Vector3(0, 0.065, street - 6.0), Color(0.82, 0.84, 0.83), false)
 		_box("RoadEdgeLine", Vector3(200, 0.025, 0.12), Vector3(0, 0.065, street + 6.0), Color(0.82, 0.84, 0.83), false)
-	for ix in [-60.0, -30.0, 0.0, 30.0, 60.0]:
-		for iz in [-60.0, -30.0, 0.0, 30.0, 60.0]:
-			for stripe in range(7):
-				var offset := -4.8 + float(stripe) * 1.6
-				_box("CrosswalkStripe", Vector3(0.9, 0.035, 3.0), Vector3(ix + offset, 0.075, iz - 7.4), Color(0.88, 0.9, 0.88), false)
-				_box("CrosswalkStripe", Vector3(0.9, 0.035, 3.0), Vector3(ix + offset, 0.075, iz + 7.4), Color(0.88, 0.9, 0.88), false)
-				_box("CrosswalkStripe", Vector3(3.0, 0.035, 0.9), Vector3(ix - 7.4, 0.075, iz + offset), Color(0.88, 0.9, 0.88), false)
-				_box("CrosswalkStripe", Vector3(3.0, 0.035, 0.9), Vector3(ix + 7.4, 0.075, iz + offset), Color(0.88, 0.9, 0.88), false)
+	for ix in [-30.0, 0.0, 30.0]:
+		for iz in [-30.0, 0.0, 30.0]:
+			for stripe in range(5):
+				var offset := -4.0 + float(stripe) * 2.0
+				_box("CrosswalkStripe", Vector3(0.9, 0.035, 2.8), Vector3(ix + offset, 0.075, iz - 7.3), Color(0.88, 0.9, 0.88), false)
+				_box("CrosswalkStripe", Vector3(0.9, 0.035, 2.8), Vector3(ix + offset, 0.075, iz + 7.3), Color(0.88, 0.9, 0.88), false)
+				_box("CrosswalkStripe", Vector3(2.8, 0.035, 0.9), Vector3(ix - 7.3, 0.075, iz + offset), Color(0.88, 0.9, 0.88), false)
+				_box("CrosswalkStripe", Vector3(2.8, 0.035, 0.9), Vector3(ix + 7.3, 0.075, iz + offset), Color(0.88, 0.9, 0.88), false)
 
 func _create_street_furniture() -> void:
 	# Repeated street lamps and traffic signals use simple meshes to stay mobile-friendly.
@@ -756,7 +756,7 @@ func _create_vehicle() -> void:
 			var tyre_mat := StandardMaterial3D.new()
 			tyre_mat.albedo_color = Color(0.035, 0.04, 0.045)
 			tyre_mat.roughness = 0.96
-		tyre.material_override = tyre_mat
+			tyre.material_override = tyre_mat
 			vehicle.add_child(tyre)
 			var rim := MeshInstance3D.new()
 			var rim_mesh := CylinderMesh.new()
