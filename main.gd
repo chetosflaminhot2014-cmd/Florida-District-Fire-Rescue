@@ -441,6 +441,8 @@ func _create_world() -> void:
 	_create_police_station()
 	_create_city_blocks()
 	_create_trees()
+	_create_street_furniture()
+	_create_crosswalks()
 
 func _create_police_station() -> void:
 	_box("PoliceStation", Vector3(17, 6, 11), Vector3(-20, 3, 18), Color(0.25, 0.31, 0.39), true)
@@ -528,6 +530,44 @@ func _create_civilian_building(base_position: Vector3, building_color: Color) ->
 	_box("FrontDoor", Vector3(1.15, 2.15, 0.12), base_position + Vector3(0, 1.08, -size_z / 2.0 - 0.12), Color(0.18, 0.12, 0.08), false)
 	if style == 0:
 		_box("Porch", Vector3(2.8, 0.18, 1.2), base_position + Vector3(0, 0.12, -size_z / 2.0 - 0.6), Color(0.55, 0.52, 0.45), false)
+
+
+func _create_crosswalks() -> void:
+	# Zebra crossings and white lane-edge lines make the grid read as actual streets.
+	for street in [-60.0, -30.0, 0.0, 30.0, 60.0]:
+		_box("RoadEdgeLine", Vector3(0.12, 0.025, 200), Vector3(street - 6.0, 0.065, 0), Color(0.82, 0.84, 0.83), false)
+		_box("RoadEdgeLine", Vector3(0.12, 0.025, 200), Vector3(street + 6.0, 0.065, 0), Color(0.82, 0.84, 0.83), false)
+		_box("RoadEdgeLine", Vector3(200, 0.025, 0.12), Vector3(0, 0.065, street - 6.0), Color(0.82, 0.84, 0.83), false)
+		_box("RoadEdgeLine", Vector3(200, 0.025, 0.12), Vector3(0, 0.065, street + 6.0), Color(0.82, 0.84, 0.83), false)
+	for ix in [-60.0, -30.0, 0.0, 30.0, 60.0]:
+		for iz in [-60.0, -30.0, 0.0, 30.0, 60.0]:
+			for stripe in range(7):
+				var offset := -4.8 + float(stripe) * 1.6
+				_box("CrosswalkStripe", Vector3(0.9, 0.035, 3.0), Vector3(ix + offset, 0.075, iz - 7.4), Color(0.88, 0.9, 0.88), false)
+				_box("CrosswalkStripe", Vector3(0.9, 0.035, 3.0), Vector3(ix + offset, 0.075, iz + 7.4), Color(0.88, 0.9, 0.88), false)
+				_box("CrosswalkStripe", Vector3(3.0, 0.035, 0.9), Vector3(ix - 7.4, 0.075, iz + offset), Color(0.88, 0.9, 0.88), false)
+				_box("CrosswalkStripe", Vector3(3.0, 0.035, 0.9), Vector3(ix + 7.4, 0.075, iz + offset), Color(0.88, 0.9, 0.88), false)
+
+func _create_street_furniture() -> void:
+	# Repeated street lamps and traffic signals use simple meshes to stay mobile-friendly.
+	for z in [-84.0, -48.0, -18.0, 18.0, 48.0, 84.0]:
+		for x in [-67.0, -37.0, -7.0, 23.0, 53.0]:
+			if absf(x) < 12.0 and absf(z) < 12.0:
+				continue
+			_box("StreetLampPole", Vector3(0.16, 5.2, 0.16), Vector3(x, 2.6, z), Color(0.16, 0.18, 0.2), false)
+			_box("StreetLampArm", Vector3(1.15, 0.12, 0.12), Vector3(x + 0.48, 5.08, z), Color(0.16, 0.18, 0.2), false)
+			_box("StreetLampHead", Vector3(0.55, 0.16, 0.3), Vector3(x + 0.95, 5.0, z), Color(0.95, 0.82, 0.55), false)
+	# A few signalised intersections near downtown, with red/amber/green lenses.
+	for ix in [-30.0, 0.0, 30.0]:
+		for iz in [-30.0, 0.0, 30.0]:
+			for side in [-1.0, 1.0]:
+				var px := ix + side * 8.0
+				var pz := iz - side * 8.0
+				_box("TrafficSignalPole", Vector3(0.14, 3.8, 0.14), Vector3(px, 1.9, pz), Color(0.12, 0.13, 0.14), false)
+				_box("TrafficSignalHousing", Vector3(0.42, 0.95, 0.32), Vector3(px, 3.65, pz), Color(0.055, 0.06, 0.065), false)
+				_sphere("SignalRed", Vector3(px, 3.94, pz - 0.18), 0.105, Color(0.9, 0.035, 0.025))
+				_sphere("SignalAmber", Vector3(px, 3.66, pz - 0.18), 0.105, Color(0.95, 0.55, 0.035))
+				_sphere("SignalGreen", Vector3(px, 3.38, pz - 0.18), 0.105, Color(0.04, 0.72, 0.19))
 
 func _create_trees() -> void:
 	for i in range(34):
@@ -667,24 +707,73 @@ func _sphere_child(parent: Node3D, pos: Vector3, radius: float, color: Color) ->
 	parent.add_child(m)
 
 func _create_vehicle() -> void:
+	# Procedural Crown Victoria-inspired patrol sedan. All geometry is generated locally.
 	vehicle = CharacterBody3D.new()
-	vehicle.name = "PatrolCar"
+	vehicle.name = "PatrolCar_CrownVictoria"
 	vehicle.position = Vector3(-20, 0.35, 3)
 	game_world.add_child(vehicle)
 	var shape_node := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(2.0, 1.0, 4.2)
+	shape.size = Vector3(2.0, 1.25, 4.5)
 	shape_node.shape = shape
-	shape_node.position.y = 0.55
+	shape_node.position.y = 0.68
 	vehicle.add_child(shape_node)
-	_add_person_box(vehicle, Vector3(2.0, 0.65, 4.2), Vector3(0, 0.5, 0), Color(0.86, 0.88, 0.9))
-	_add_person_box(vehicle, Vector3(1.65, 0.6, 2.0), Vector3(0, 1.05, -0.15), Color(0.055, 0.09, 0.15))
-	_add_person_box(vehicle, Vector3(0.55, 0.16, 0.45), Vector3(0, 1.42, -0.15), Color(0.04,0.04,0.05))
-	_add_person_box(vehicle, Vector3(0.5, 0.18, 0.28), Vector3(-0.35, 1.42, -0.15), Color(0.9,0.04,0.04))
-	_add_person_box(vehicle, Vector3(0.5, 0.18, 0.28), Vector3(0.35, 1.42, -0.15), Color(0.02,0.15,0.95))
-	for x in [-0.9, 0.9]:
-		for z in [-1.35, 1.35]:
-			_sphere_child(vehicle, Vector3(x, 0.22, z), 0.28, Color(0.04,0.04,0.05))
+	_add_person_box(vehicle, Vector3(1.98, 0.62, 4.35), Vector3(0, 0.58, 0), Color(0.88, 0.89, 0.87))
+	_add_person_box(vehicle, Vector3(1.68, 0.66, 2.12), Vector3(0, 1.13, -0.05), Color(0.035, 0.065, 0.09))
+	# Hood, trunk, bumpers and grille give the long-body American patrol-sedan silhouette.
+	_add_person_box(vehicle, Vector3(1.82, 0.12, 1.08), Vector3(0, 0.91, -1.48), Color(0.92, 0.92, 0.89))
+	_add_person_box(vehicle, Vector3(1.78, 0.12, 0.78), Vector3(0, 0.91, 1.62), Color(0.92, 0.92, 0.89))
+	_add_person_box(vehicle, Vector3(1.95, 0.18, 0.18), Vector3(0, 0.38, -2.22), Color(0.12, 0.14, 0.16))
+	_add_person_box(vehicle, Vector3(1.95, 0.18, 0.18), Vector3(0, 0.38, 2.22), Color(0.12, 0.14, 0.16))
+	_add_person_box(vehicle, Vector3(0.9, 0.32, 0.08), Vector3(0, 0.61, -2.23), Color(0.08, 0.09, 0.1))
+	_add_person_box(vehicle, Vector3(0.36, 0.22, 0.08), Vector3(-0.68, 0.73, -2.23), Color(1.0, 0.88, 0.58))
+	_add_person_box(vehicle, Vector3(0.36, 0.22, 0.08), Vector3(0.68, 0.73, -2.23), Color(1.0, 0.88, 0.58))
+	for side in [-1.0, 1.0]:
+		_add_person_box(vehicle, Vector3(0.045, 0.34, 1.85), Vector3(side * 1.01, 0.73, 0.12), Color(0.035, 0.12, 0.24))
+		_add_person_box(vehicle, Vector3(0.05, 0.13, 1.7), Vector3(side * 1.035, 0.96, 0.12), Color(0.9, 0.9, 0.86))
+		_add_person_box(vehicle, Vector3(0.12, 0.12, 0.25), Vector3(side * 1.08, 1.0, -0.78), Color(0.08, 0.09, 0.1))
+		_add_person_box(vehicle, Vector3(0.07, 0.13, 0.48), Vector3(side * 1.04, 1.31, -0.05), Color(0.035, 0.045, 0.055))
+	# Four rubber tyres with visible rims; cylinder axes are rotated to match the wheel hubs.
+	for x in [-1.02, 1.02]:
+		for z in [-1.42, 1.42]:
+			var tyre := MeshInstance3D.new()
+			tyre.name = "PatrolTyre"
+			var tyre_mesh := CylinderMesh.new()
+			tyre_mesh.top_radius = 0.34
+			tyre_mesh.bottom_radius = 0.34
+			tyre_mesh.height = 0.22
+			tyre.mesh = tyre_mesh
+			tyre.rotation_degrees.z = 90
+			tyre.position = Vector3(x, 0.36, z)
+			var tyre_mat := StandardMaterial3D.new()
+			tyre_mat.albedo_color = Color(0.035, 0.04, 0.045)
+			tyre_mat.roughness = 0.96
+		tyre.material_override = tyre_mat
+			vehicle.add_child(tyre)
+			var rim := MeshInstance3D.new()
+			var rim_mesh := CylinderMesh.new()
+			rim_mesh.top_radius = 0.17
+			rim_mesh.bottom_radius = 0.17
+			rim_mesh.height = 0.235
+			rim.mesh = rim_mesh
+			rim.rotation_degrees.z = 90
+			rim.position = Vector3(x * 1.015, 0.36, z)
+			var rim_mat := StandardMaterial3D.new()
+			rim_mat.albedo_color = Color(0.48, 0.51, 0.54)
+			rim_mat.metallic = 0.55
+			rim.material_override = rim_mat
+			vehicle.add_child(rim)
+	# Rear lamps, mirrors, windshields and roof lightbar.
+	for x in [-0.68, 0.68]:
+		_add_person_box(vehicle, Vector3(0.3, 0.22, 0.08), Vector3(x, 0.72, 2.2), Color(0.72, 0.035, 0.025))
+		_add_person_box(vehicle, Vector3(0.55, 0.08, 0.36), Vector3(x * 0.55, 1.48, -0.05), Color(0.025, 0.03, 0.035))
+	_add_person_box(vehicle, Vector3(1.35, 0.42, 0.08), Vector3(0, 1.25, -1.08), Color(0.12, 0.22, 0.29))
+	_add_person_box(vehicle, Vector3(1.35, 0.4, 0.08), Vector3(0, 1.25, 0.98), Color(0.12, 0.22, 0.29))
+	_add_person_box(vehicle, Vector3(0.42, 0.17, 0.34), Vector3(-0.48, 1.52, -0.05), Color(0.95, 0.025, 0.025))
+	_add_person_box(vehicle, Vector3(0.42, 0.17, 0.34), Vector3(0.0, 1.52, -0.05), Color(0.94, 0.94, 0.88))
+	_add_person_box(vehicle, Vector3(0.42, 0.17, 0.34), Vector3(0.48, 1.52, -0.05), Color(0.025, 0.12, 0.98))
+	_add_person_box(vehicle, Vector3(0.42, 0.12, 0.34), Vector3(0, 1.54, -0.05), Color(0.025, 0.035, 0.045))
+
 
 func _create_service_vehicles() -> void:
 	# Lightweight parked emergency-service vehicles for the prototype.
