@@ -32,6 +32,7 @@ var patrol_blue_light: MeshInstance3D
 var emergency_lights_enabled := true
 var touch_move := Vector2.ZERO
 var touch_run := false
+var touch_brake := false
 var look_touch_id := -1
 var last_touch_position := Vector2.ZERO
 var npc_nodes: Array[Node3D] = []
@@ -930,6 +931,7 @@ func _create_hud() -> void:
 	_touch_button("CORRER", Vector2(-150, -100), Vector2(120, 54), func(): touch_run = true, func(): touch_run = false, true)
 	_touch_button("USAR / BAJAR", Vector2(-150, -38), Vector2(120, 54), func(): pass, Callable(), true)
 	_touch_button("LUCES", Vector2(-150, -162), Vector2(120, 50), func(): pass, Callable(), true)
+	_touch_button("FRENO", Vector2(-150, -220), Vector2(120, 50), func(): touch_brake = true, func(): touch_brake = false, true)
 
 func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size: Vector2, on_down: Callable, on_up: Callable, right_side := false) -> void:
 	var b := Button.new()
@@ -1005,7 +1007,10 @@ func _physics_process(delta: float) -> void:
 		var steer := input_dir.x
 		# Aceleración y frenado progresivos; el coche no cambia de velocidad instantáneamente.
 		var target_speed := throttle * 16.0
-		var acceleration := 9.0 if absf(throttle) > 0.01 else 5.0
+		var braking := Input.is_key_pressed(KEY_SPACE) or touch_brake
+		if braking:
+			target_speed = 0.0
+		var acceleration := 18.0 if braking else (9.0 if absf(throttle) > 0.01 else 5.0)
 		vehicle_speed = move_toward(vehicle_speed, target_speed, acceleration * delta)
 		if absf(vehicle_speed) > 0.25:
 			var steering_factor := clampf(absf(vehicle_speed) / 5.0, 0.25, 1.0)
@@ -1046,7 +1051,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and not OS.has_feature("mobile"):
 		if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not driving:
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		_rotate_camera(event.relative)
 	if event is InputEventScreenTouch:
 		if event.pressed and event.position.x >= get_viewport().get_visible_rect().size.x * 0.45:
@@ -1054,7 +1059,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			last_touch_position = event.position
 		elif not event.pressed and event.index == look_touch_id:
 			look_touch_id = -1
-	if event is InputEventScreenDrag and event.index == look_touch_id and not driving:
+	if event is InputEventScreenDrag and event.index == look_touch_id:
 		_rotate_camera(event.relative)
 
 func _rotate_camera(relative_motion: Vector2) -> void:
