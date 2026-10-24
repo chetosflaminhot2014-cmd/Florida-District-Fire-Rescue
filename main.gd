@@ -85,10 +85,6 @@ var player_visual: Node3D
 var player_animation_player: AnimationPlayer
 var player_animation_names: Array[StringName] = []
 var player_motion_state := ""
-var weapon_holder: Node3D
-var equipped_weapon: String = "RIFLE"
-var equipped_weapon_instance: Node3D
-const WEAPON_SCENES := {"ESCOPETA": "res://remington_870_shotgun.glb", "RIFLE": "res://lr-300_ml-a_assault_rifle.glb"}
 var hud_layer: CanvasLayer
 var status_label: Label
 var minimap: MinimapControl
@@ -809,30 +805,6 @@ func _sphere(node_name: String, pos: Vector3, radius: float, color: Color) -> Me
 	game_world.add_child(node)
 	return node
 
-func _equip_weapon(weapon_name: String) -> void:
-	if not WEAPON_SCENES.has(weapon_name):
-		return
-	if not is_instance_valid(weapon_holder):
-		return
-	if is_instance_valid(equipped_weapon_instance):
-		equipped_weapon_instance.queue_free()
-		equipped_weapon_instance = null
-	equipped_weapon = weapon_name
-	var weapon_resource: Resource = load(WEAPON_SCENES[weapon_name])
-	if weapon_resource == null or not (weapon_resource is PackedScene):
-		if is_instance_valid(status_label):
-			status_label.text = "No se pudo cargar el modelo: " + weapon_name
-		return
-	equipped_weapon_instance = (weapon_resource as PackedScene).instantiate() as Node3D
-	if equipped_weapon_instance == null:
-		if is_instance_valid(status_label):
-			status_label.text = "El modelo de " + weapon_name + " no contiene un nodo 3D válido"
-		return
-	equipped_weapon_instance.name = weapon_name.capitalize() + "Model"
-	weapon_holder.add_child(equipped_weapon_instance)
-	if is_instance_valid(status_label):
-		status_label.text = "ARMA EQUIPADA: " + weapon_name + " · 1 Escopeta / 2 Rifle"
-
 func _create_player(female: bool) -> void:
 	player = CharacterBody3D.new()
 	player.name = "Player"
@@ -861,19 +833,6 @@ func _create_player(female: bool) -> void:
 	camera.rotation_degrees.x = -10
 	camera.current = true
 	camera_pivot.add_child(camera)
-
-func _make_female_player_model() -> Node3D:
-	var visual := Node3D.new()
-	visual.name = "FemaleOfficerVisual"
-	var model_resource := load("res://police_officer_in_uniform.glb")
-	if model_resource is PackedScene:
-		var model_instance := (model_resource as PackedScene).instantiate()
-		model_instance.name = "FemaleOfficerModel"
-		visual.add_child(model_instance)
-	else:
-		# Keep a visible fallback if the uploaded model cannot be imported.
-		visual.add_child(_make_person(true, true, "sheriff"))
-	return visual
 
 func _setup_player_animations(root: Node) -> void:
 	player_animation_player = _find_animation_player(root)
@@ -1033,32 +992,6 @@ func _create_vehicle() -> void:
 	patrol_red_light = _add_person_box(vehicle, Vector3(0.32, 0.13, 0.22), Vector3(-0.34, 1.52, -0.05), Color(0.95, 0.025, 0.025))
 	_add_person_box(vehicle, Vector3(0.24, 0.13, 0.22), Vector3(0.0, 1.52, -0.05), Color(0.94, 0.94, 0.88))
 	patrol_blue_light = _add_person_box(vehicle, Vector3(0.32, 0.13, 0.22), Vector3(0.34, 1.52, -0.05), Color(0.025, 0.12, 0.98))
-
-
-func _create_second_patrol() -> void:
-	# Segunda patrulla estacionada; la primera conserva el sistema de conducción actual.
-	var parked_patrol := StaticBody3D.new()
-	parked_patrol.name = "PatrolCar_RCMP_FordExplorer"
-	parked_patrol.position = Vector3(-29.0, 0.0, 3.0)
-	game_world.add_child(parked_patrol)
-
-	var shape_node := CollisionShape3D.new()
-	var shape := BoxShape3D.new()
-	shape.size = Vector3(2.2, 1.6, 4.8)
-	shape_node.shape = shape
-	shape_node.position.y = 0.8
-	parked_patrol.add_child(shape_node)
-
-	var patrol_scene := load("res://rcmp_ford_explorer.glb") as PackedScene
-	if patrol_scene != null:
-		var patrol_visual := patrol_scene.instantiate()
-		patrol_visual.name = "RCMPFordExplorerModel"
-		if patrol_visual is Node3D:
-			patrol_visual.position = Vector3.ZERO
-		parked_patrol.add_child(patrol_visual)
-		_fit_imported_model(patrol_visual, Vector3(2.2, 1.6, 4.8))
-	else:
-		push_error("No se pudo cargar res://rcmp_ford_explorer.glb")
 
 
 func _create_service_vehicles() -> void:
