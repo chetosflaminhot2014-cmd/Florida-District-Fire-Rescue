@@ -31,11 +31,7 @@ jobs:
       - name: Install Android SDK and NDK
         uses: android-actions/setup-android@v3
         with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
-            ndk;28.1.13356709
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0 ndk;28.1.13356709"
 
       - name: Download Godot 4.7.2 and export templates
         shell: bash
