@@ -36,7 +36,8 @@ jobs:
           chmod +x "$GODOT_BIN"
           echo "GODOT_BIN=$GODOT_BIN" >> "$GITHUB_ENV"
       - name: Import project and check scripts
-        run: "$GODOT_BIN" --headless --editor --path . --quit
+        run: |
+          "$GODOT_BIN" --headless --editor --path . --quit
       - name: Export Windows build
         run: |
           mkdir -p build
