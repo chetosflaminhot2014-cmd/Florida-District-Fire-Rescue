@@ -303,14 +303,67 @@ func _create_city_blocks() -> void:
 		for z in [-75.0, -45.0, -15.0, 15.0, 45.0, 75.0]:
 			if absf(x) < 20 and absf(z - 18) < 18:
 				continue
-			var h := rng.randf_range(5.0, 13.0)
-			var size_x := rng.randf_range(9.0, 14.0)
-			var size_z := rng.randf_range(9.0, 14.0)
-			_box("Building", Vector3(size_x, h, size_z), Vector3(x, h / 2.0, z), colors[rng.randi_range(0, colors.size()-1)], true)
-			# Simple facade windows on the street-facing side.
-			for floor_index in range(1, int(h / 2.5)):
-				for window_index in range(2):
-					_box("Window", Vector3(1.2, 0.8, 0.06), Vector3(x - 2.5 + window_index * 5.0, floor_index * 2.3, z - size_z / 2.0 - 0.04), Color(0.14, 0.28, 0.38), false)
+			var civic_name := ""
+			if x == -45.0 and z == -45.0: civic_name = "CITY HALL"
+			elif x == 45.0 and z == -45.0: civic_name = "MEDICAL CENTER"
+			elif x == 45.0 and z == 45.0: civic_name = "FIRE DEPARTMENT"
+			elif x == -75.0 and z == 45.0: civic_name = "PUBLIC LIBRARY"
+			if not civic_name.is_empty():
+				_create_civic_building(civic_name, Vector3(x, 0, z))
+			else:
+				_create_civilian_building(Vector3(x, 0, z), colors[rng.randi_range(0, colors.size()-1)])
+
+func _create_civic_building(building_type: String, base_position: Vector3) -> void:
+	var building_color := Color(0.66, 0.63, 0.55)
+	var accent_color := Color(0.13, 0.22, 0.34)
+	var width := 15.0
+	var depth := 12.0
+	var height := 7.0
+	if building_type == "MEDICAL CENTER":
+		building_color = Color(0.83, 0.85, 0.83)
+		accent_color = Color(0.12, 0.48, 0.55)
+		width = 14.0
+		depth = 13.0
+		height = 8.0
+	elif building_type == "FIRE DEPARTMENT":
+		building_color = Color(0.57, 0.16, 0.12)
+		accent_color = Color(0.9, 0.72, 0.2)
+		width = 15.0
+		depth = 12.0
+		height = 6.0
+	elif building_type == "PUBLIC LIBRARY":
+		building_color = Color(0.69, 0.57, 0.42)
+		accent_color = Color(0.2, 0.32, 0.4)
+		width = 13.0
+		depth = 12.0
+		height = 6.0
+	_box(building_type.replace(" ", "_"), Vector3(width, height, depth), base_position + Vector3(0, height / 2.0, 0), building_color, true)
+	_box("CivicRoof_" + building_type, Vector3(width + 0.8, 0.35, depth + 0.8), base_position + Vector3(0, height + 0.16, 0), accent_color, false)
+	_box("Entrance_" + building_type, Vector3(3.2, 3.1, 0.22), base_position + Vector3(0, 1.55, -depth / 2.0 - 0.12), accent_color.darkened(0.4), false)
+	_box("Sign_" + building_type, Vector3(minf(width - 2.0, 10.0), 0.65, 0.18), base_position + Vector3(0, height - 1.0, -depth / 2.0 - 0.15), accent_color, false)
+	for window_x in [-4.0, 4.0]:
+		for window_y in [2.2, 4.5]:
+			_box("CivicWindow", Vector3(1.6, 1.1, 0.08), base_position + Vector3(window_x, window_y, -depth / 2.0 - 0.13), Color(0.18, 0.36, 0.47), false)
+	if building_type == "MEDICAL CENTER":
+		_box("MedicalCross", Vector3(0.45, 2.0, 0.16), base_position + Vector3(0, height - 1.3, -depth / 2.0 - 0.27), Color(0.88, 0.97, 0.95), false)
+		_box("MedicalCrossBar", Vector3(1.5, 0.45, 0.16), base_position + Vector3(0, height - 1.3, -depth / 2.0 - 0.27), Color(0.88, 0.97, 0.95), false)
+
+func _create_civilian_building(base_position: Vector3, building_color: Color) -> void:
+	var height := rng.randf_range(5.0, 13.0)
+	var size_x := rng.randf_range(9.0, 14.0)
+	var size_z := rng.randf_range(9.0, 14.0)
+	var style := rng.randi_range(0, 2)
+	if style == 0:
+		# Small suburban house with a pitched-looking roof made from a simple cap.
+		height = rng.randf_range(4.0, 6.0)
+		size_x = rng.randf_range(8.0, 10.0)
+		size_z = rng.randf_range(8.0, 11.0)
+	_box("CivilianBuilding", Vector3(size_x, height, size_z), base_position + Vector3(0, height / 2.0, 0), building_color, true)
+	var roof_color := building_color.darkened(0.28)
+	_box("CivilianRoof", Vector3(size_x + 0.55, 0.35, size_z + 0.55), base_position + Vector3(0, height + 0.15, 0), roof_color, false)
+	for floor_index in range(1, max(2, int(height / 2.5))):
+		for window_index in range(2):
+			_box("CivilianWindow", Vector3(1.2, 0.8, 0.07), base_position + Vector3(-size_x * 0.24 + window_index * size_x * 0.48, floor_index * 2.2, -size_z / 2.0 - 0.05), Color(0.14, 0.28, 0.38), false)
 
 func _create_trees() -> void:
 	for i in range(34):
