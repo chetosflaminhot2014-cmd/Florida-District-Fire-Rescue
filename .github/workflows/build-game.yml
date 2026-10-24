@@ -9,11 +9,7 @@ on:
       - "main.tscn"
       - "project.godot"
       - "dispatch_system.gd"
-      - "README.md"
       - "export_presets.cfg"
-      - "*.glb"
-      - "models/**"
-      - "assets/**"
       - ".github/workflows/build-game.yml"
 
 permissions:
@@ -167,7 +163,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FireDepartmentSimulator-Windows-PC
-          path: build/PoliceOfficerSimulator.exe
+          path: build/FireDepartmentSimulator.exe
           if-no-files-found: error
           retention-days: 14
 
@@ -231,6 +227,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FireDepartmentSimulator-Android-APK
-          path: build/PoliceOfficerSimulator.apk
+          path: build/FireDepartmentSimulator.apk
           if-no-files-found: error
           retention-days: 14
