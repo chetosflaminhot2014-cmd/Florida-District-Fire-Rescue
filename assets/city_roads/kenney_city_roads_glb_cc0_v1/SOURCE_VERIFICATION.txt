@@ -1,0 +1,11 @@
+Source asset: City Kit Roads / Kenney
+Source page: https://kenney.nl/assets/city-kit-roads
+Source download used: https://kenney.nl/media/pages/assets/city-kit-roads/4b84d0ea8d-1741864740/kenney_city-kit-roads.zip
+Original creator/distributor: Kenney
+License stated in included License.txt: Creative Commons Zero (CC0)
+License URL: https://creativecommons.org/publicdomain/zero/1.0/
+License checked: 2026-05-09 JST
+
+The included License.txt states that the content may be used for personal,
+educational, and commercial purposes. Attribution is appreciated but not
+required by the source license text.
