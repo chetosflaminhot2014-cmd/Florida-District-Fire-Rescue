@@ -126,6 +126,9 @@ var fire_location := Vector3.ZERO
 var extinguishing := false
 var fire_visual: Node3D
 var fire_glow: OmniLight3D
+var gas_station_positions: Array[Vector3] = []
+var fuel_level := 100.0
+var refuel_notice_timer := 0.0
 
 func _ready() -> void:
 	rng.randomize()
@@ -215,7 +218,7 @@ func _process(delta: float) -> void:
 		if driving:
 			var speed_kmh := roundi(absf(vehicle_speed) * 3.6)
 			var gear := "R" if vehicle_speed < -0.2 else "D"
-			status_label.text = "CAMIÓN · %d km/h · %s · LUCES %s" % [speed_kmh, gear, "ON" if emergency_lights_enabled else "OFF"]
+			status_label.text = "CAMIÓN · %d km/h · COMBUSTIBLE %d%% · LUCES %s" % [speed_kmh, roundi(fuel_level), "ON" if emergency_lights_enabled else "OFF"]
 		else:
 			status_label.text = "BOMBERO A PIE · WASD · E PARA SUBIR/BAJAR · NPC: " + str(npc_nodes.size())
 
@@ -536,6 +539,7 @@ func _create_world() -> void:
 	_create_road_network_from_pack()
 	_create_fire_station()
 	_create_city_blocks()
+	_create_gas_stations()
 	_create_trees()
 	_create_street_furniture()
 	_create_crosswalks()
@@ -628,6 +632,13 @@ func _create_city_blocks() -> void:
 			elif x == 75.0 and z == 75.0: civic_name = "FIRE DEPARTMENT"
 			elif x == -165.0 and z == 75.0: civic_name = "PUBLIC LIBRARY"
 			var block_position := Vector3(x, 0, z)
+			var reserved_for_gas_station := false
+			for station_position in [Vector3(-150, 0, -150), Vector3(150, 0, -150), Vector3(-150, 0, 150), Vector3(150, 0, 150)]:
+				if absf(x - station_position.x) < 24.0 and absf(z - station_position.z) < 24.0:
+					reserved_for_gas_station = true
+					break
+			if reserved_for_gas_station:
+				continue
 			if not civic_name.is_empty():
 				_create_civic_building(civic_name, block_position)
 			elif absf(x) <= 45.0 and absf(z) <= 45.0:
@@ -635,6 +646,81 @@ func _create_city_blocks() -> void:
 				_create_downtown_building(block_position)
 			else:
 				_create_civilian_building(block_position, colors[rng.randi_range(0, colors.size()-1)])
+
+func _create_gas_stations() -> void:
+	# Four separated stations, each placed in a reserved block beside the road grid.
+	gas_station_positions.clear()
+	var locations: Array[Dictionary] = [
+		{"name": "MIRAGE FUEL · DOWNTOWN", "position": Vector3(-150, 0, -150), "rotation": 0.0},
+		{"name": "MIRAGE FUEL · NORTH", "position": Vector3(150, 0, -150), "rotation": PI},
+		{"name": "MIRAGE FUEL · SOUTHWEST", "position": Vector3(-150, 0, 150), "rotation": PI / 2.0},
+		{"name": "MIRAGE FUEL · EAST", "position": Vector3(150, 0, 150), "rotation": -PI / 2.0}
+	]
+	for data in locations:
+		var station_position: Vector3 = data["position"]
+		gas_station_positions.append(station_position)
+		var station := Node3D.new()
+		station.name = str(data["name"]).replace(" ", "_").replace("·", "")
+		station.position = station_position
+		station.rotation.y = float(data["rotation"])
+		game_world.add_child(station)
+
+		# The uploaded GLB supplies the canopy; pumps, forecourt and shop are lightweight game objects.
+		var canopy_path := "res://gas-station-canopy.glb"
+		if ResourceLoader.exists(canopy_path):
+			var canopy_scene := load(canopy_path) as PackedScene
+			if canopy_scene != null:
+				var canopy := canopy_scene.instantiate()
+				canopy.name = "GasStationCanopy"
+				if canopy is Node3D:
+					canopy.position = Vector3(0, 0.15, 0)
+					canopy.scale = Vector3.ONE
+					station.add_child(canopy)
+				else:
+					canopy.queue_free()
+
+		_box("GasStationForecourt", Vector3(25, 0.12, 22), station_position + Vector3(0, 0.02, 0), Color(0.24, 0.25, 0.25), false)
+		_box("GasStationShop", Vector3(7, 3.6, 5), station_position + Vector3(0, 1.8, 8.0), Color(0.82, 0.83, 0.78), true)
+		_box("GasStationShopRoof", Vector3(7.5, 0.35, 5.5), station_position + Vector3(0, 3.75, 8.0), Color(0.75, 0.12, 0.08), false)
+		_box("GasStationSign", Vector3(4.8, 1.0, 0.18), station_position + Vector3(0, 3.0, 5.35), Color(0.05, 0.12, 0.18), false)
+		for pump_x in [-5.0, 0.0, 5.0]:
+			_box("FuelPumpBase", Vector3(1.0, 0.18, 0.8), station_position + Vector3(pump_x, 0.17, -2.0), Color(0.12, 0.13, 0.14), false)
+			_box("FuelPump", Vector3(0.7, 1.35, 0.55), station_position + Vector3(pump_x, 0.92, -2.0), Color(0.88, 0.88, 0.82), false)
+			_box("FuelPumpDisplay", Vector3(0.42, 0.3, 0.08), station_position + Vector3(pump_x, 1.25, -2.3), Color(0.04, 0.16, 0.19), false)
+			_box("FuelHose", Vector3(0.08, 0.65, 0.08), station_position + Vector3(pump_x + 0.37, 0.7, -1.85), Color(0.035, 0.04, 0.045), false)
+		var sign_3d := Label3D.new()
+		sign_3d.name = "StationName"
+		sign_3d.text = str(data["name"])
+		sign_3d.position = station_position + Vector3(0, 5.2, 0)
+		sign_3d.font_size = 30
+		sign_3d.outline_size = 5
+		sign_3d.modulate = Color(1.0, 0.82, 0.3)
+		sign_3d.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		game_world.add_child(sign_3d)
+
+func _try_refuel() -> void:
+	if not driving or not is_instance_valid(vehicle):
+		if is_instance_valid(status_label):
+			status_label.text = "REPOSTAR · Súbete al camión y estaciónalo junto a los surtidores"
+		return
+	if absf(vehicle_speed) > 0.8:
+		if is_instance_valid(status_label):
+			status_label.text = "REPOSTAR · Detén el camión primero"
+		return
+	var nearest_distance := INF
+	for station_position in gas_station_positions:
+		nearest_distance = minf(nearest_distance, Vector2(vehicle.global_position.x - station_position.x, vehicle.global_position.z - station_position.z).length())
+	if nearest_distance > 17.0:
+		if is_instance_valid(status_label):
+			status_label.text = "REPOSTAR · Acércate a una gasolinera señalizada"
+		return
+	if fuel_level >= 99.9:
+		if is_instance_valid(status_label):
+			status_label.text = "DEPÓSITO LLENO · 100%"
+		return
+	fuel_level = 100.0
+	if is_instance_valid(status_label):
+		status_label.text = "REPOSTAJE COMPLETADO · Depósito al 100%"
 
 func _create_civic_building(building_type: String, base_position: Vector3) -> void:
 	var target_size := Vector3(13.0, 7.5, 11.0)
@@ -1286,6 +1372,7 @@ func _create_hud() -> void:
 	_touch_button("CORRER", Vector2(-164, -190), Vector2(148, 52), func(): touch_run = true, func(): touch_run = false, true)
 	_touch_button("FRENO", Vector2(-164, -248), Vector2(148, 52), func(): touch_brake = true, func(): touch_brake = false, true)
 	_touch_button("MANGUERA", Vector2(-164, -306), Vector2(148, 52), func(): _toggle_extinguishing(), Callable(), true)
+	_touch_button("REPOSTAR", Vector2(-164, -364), Vector2(148, 52), func(): _try_refuel(), Callable(), true)
 
 func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size: Vector2, on_down: Callable, on_up: Callable, right_side := false) -> void:
 	var b := Button.new()
@@ -1375,6 +1462,9 @@ func _physics_process(delta: float) -> void:
 	input_dir += touch_move
 	input_dir = input_dir.limit_length(1.0)
 	if driving:
+		if fuel_level <= 0.0:
+			vehicle_speed = move_toward(vehicle_speed, 0.0, PATROL_BRAKING * delta)
+			input_dir.y = 0.0
 		var throttle := -input_dir.y
 		var steer := input_dir.x
 		var braking := Input.is_key_pressed(KEY_SPACE) or touch_brake
@@ -1388,8 +1478,12 @@ func _physics_process(delta: float) -> void:
 			var acceleration := PATROL_BRAKING if changing_direction else PATROL_ACCELERATION
 			vehicle_speed = move_toward(vehicle_speed, target_speed, acceleration * delta)
 		else:
-			# Engine drag gradually slows the patrol car when the accelerator is released.
+			# Engine drag gradually slows the fire engine when the accelerator is released.
 			vehicle_speed = move_toward(vehicle_speed, 0.0, PATROL_COAST_DECELERATION * delta)
+		if fuel_level <= 0.0:
+			vehicle_speed = move_toward(vehicle_speed, 0.0, PATROL_BRAKING * delta)
+		elif absf(vehicle_speed) > 0.5:
+			fuel_level = maxf(0.0, fuel_level - delta * (0.012 + absf(vehicle_speed) * 0.0008))
 		# Smooth steering prevents abrupt keyboard/touch direction changes.
 		vehicle_steering = move_toward(vehicle_steering, steer, 3.8 * delta)
 		if absf(vehicle_speed) > 0.05 and absf(vehicle_steering) > 0.01:
@@ -1440,6 +1534,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_interact_vehicle()
 		elif event.keycode == KEY_F:
 			_toggle_extinguishing()
+		elif event.keycode == KEY_G:
+			_try_refuel()
 	if event is InputEventMouseButton and event.pressed and not OS.has_feature("mobile"):
 		if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
