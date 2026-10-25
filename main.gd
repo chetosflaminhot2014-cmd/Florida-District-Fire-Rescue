@@ -239,11 +239,7 @@ func _process(delta: float) -> void:
 		else:
 			status_label.text = "BOMBERO A PIE · WASD · E PARA SUBIR/BAJAR · NPC: " + str(npc_nodes.size())
 
-func _create_menu() -> void:
-	menu_layer = CanvasLayer.new()
-	menu_layer.name = "MenuLayer"
-	menu_layer.layer = 5
-	add_chilfunc _create_menu_scene_preview() -> void:
+func _create_menu_scene_preview() -> void:
 	var preview := Node3D.new()
 	preview.name = "MenuScenePreview"
 	add_child(preview)
@@ -343,8 +339,11 @@ func _menu_preview_box(parent: Node3D, node_name: String, box_size: Vector3, pos
 	parent.add_child(instance)
 	return instance
 
-
-d(menu_layer)
+func _create_menu() -> void:
+	menu_layer = CanvasLayer.new()
+	menu_layer.name = "MenuLayer"
+	menu_layer.layer = 5
+	add_child(menu_layer)
 
 	# F.D.F.R. cinematic command screen: restrained emergency-red accents,
 	# clear action hierarchy, and a compact layout for portrait mobile screens.
@@ -748,6 +747,8 @@ func _create_world() -> void:
 	_create_road_network_from_pack()
 	_create_fire_station()
 	_create_city_blocks()
+	_create_hospital_complex()
+	_create_airport()
 	_create_gas_stations()
 	_create_trees()
 	_create_street_furniture()
@@ -879,11 +880,91 @@ func _set_graphics_quality(value: int) -> void:
 		var quality_name := "RENDIMIENTO" if graphics_quality == 0 else ("EQUILIBRADO" if graphics_quality == 1 else "CALIDAD PC")
 		status_label.text = "GRÁFICOS: " + quality_name
 
+
+func _create_hospital_complex() -> void:
+	# The medical center block is expanded with a visible ER entrance and ambulance bays.
+	var hospital_center := Vector3(75.0, 0.0, -105.0)
+	_box("HospitalEmergencyDrive", Vector3(25.0, 0.08, 12.0), hospital_center + Vector3(0, 0.02, 13.0), Color(0.24, 0.25, 0.26), false)
+	_box("HospitalERCanopy", Vector3(9.0, 0.45, 3.2), hospital_center + Vector3(0, 3.5, 6.5), Color(0.86, 0.89, 0.88), false)
+	_box("HospitalERSign", Vector3(5.8, 0.75, 0.18), hospital_center + Vector3(0, 4.1, 4.8), Color(0.05, 0.36, 0.42), false)
+	var er_label := Label3D.new()
+	er_label.name = "HospitalEmergencyLabel"
+	er_label.text = "HOSPITAL · EMERGENCY"
+	er_label.position = hospital_center + Vector3(0, 4.12, 4.68)
+	er_label.font_size = 26
+	er_label.outline_size = 4
+	er_label.modulate = Color(0.95, 1.0, 1.0)
+	er_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	game_world.add_child(er_label)
+	for bay_x in [-5.0, 5.0]:
+		_box("HospitalAmbulanceBay", Vector3(4.2, 3.0, 0.18), hospital_center + Vector3(bay_x, 1.5, 5.0), Color(0.08, 0.28, 0.32), false)
+		_box("HospitalAmbulanceBayStripe", Vector3(3.8, 0.08, 0.04), hospital_center + Vector3(bay_x, 0.65, 4.87), Color(0.88, 0.92, 0.9), false)
+	_box("HospitalParking", Vector3(26.0, 0.06, 10.0), hospital_center + Vector3(0, 0.02, 20.0), Color(0.18, 0.19, 0.2), false)
+	for i in range(5):
+		_box("HospitalParkingLine", Vector3(0.12, 0.025, 7.0), hospital_center + Vector3(-10.0 + float(i) * 5.0, 0.06, 20.0), Color(0.9, 0.9, 0.84), false)
+
+
+func _create_airport() -> void:
+	# Compact regional airport inspired by Florida's low coastal airports.
+	# The airport occupies the reserved northwest blocks and remains inside the driving area.
+	var airport_root := Node3D.new()
+	airport_root.name = "Sunshine_Coast_Regional_Airport"
+	airport_root.position = Vector3(-140.0, 0.0, -145.0)
+	game_world.add_child(airport_root)
+
+	_box("AirportGround", Vector3(142.0, 0.08, 102.0), Vector3(-140.0, 0.015, -145.0), Color(0.31, 0.39, 0.29), false)
+	_box("AirportApron", Vector3(62.0, 0.12, 34.0), Vector3(-113.0, 0.08, -105.0), Color(0.34, 0.35, 0.34), false)
+	_box("AirportRunway", Vector3(126.0, 0.16, 17.0), Vector3(-140.0, 0.13, -160.0), Color(0.075, 0.085, 0.09), false)
+	_box("RunwayCenterLine", Vector3(116.0, 0.025, 0.22), Vector3(-140.0, 0.225, -160.0), Color(0.93, 0.93, 0.86), false)
+	for runway_mark in range(9):
+		var mark_x := -194.0 + float(runway_mark) * 13.5
+		_box("RunwayThresholdMark", Vector3(0.7, 0.03, 4.0), Vector3(mark_x, 0.235, -160.0), Color(0.94, 0.94, 0.9), false)
+	for taxi_mark in range(7):
+		_box("TaxiwayCenterLine", Vector3(0.16, 0.025, 5.0), Vector3(-104.0, 0.235, -135.0 + float(taxi_mark) * 4.5), Color(1.0, 0.78, 0.12), false)
+
+	# Passenger terminal and airfield operations hangar.
+	_box("AirportTerminal", Vector3(25.0, 7.0, 10.0), Vector3(-104.0, 3.5, -104.0), Color(0.68, 0.72, 0.72), true)
+	_box("AirportTerminalRoof", Vector3(26.0, 0.4, 10.8), Vector3(-104.0, 7.1, -104.0), Color(0.1, 0.19, 0.25), false)
+	_box("AirportTerminalWindows", Vector3(18.0, 2.4, 0.12), Vector3(-104.0, 3.7, -98.88), Color(0.12, 0.32, 0.42), false)
+	_box("AirportTerminalSign", Vector3(13.0, 0.9, 0.2), Vector3(-104.0, 5.8, -98.82), Color(0.05, 0.16, 0.22), false)
+	var airport_label := Label3D.new()
+	airport_label.name = "AirportTerminalLabel"
+	airport_label.text = "SUNSHINE COAST REGIONAL"
+	airport_label.position = Vector3(-104.0, 5.82, -98.68)
+	airport_label.font_size = 25
+	airport_label.outline_size = 5
+	airport_label.modulate = Color(0.95, 0.97, 1.0)
+	airport_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	game_world.add_child(airport_label)
+
+	_box("AirportHangar", Vector3(19.0, 6.5, 13.0), Vector3(-176.0, 3.25, -112.0), Color(0.66, 0.68, 0.67), true)
+	_box("AirportHangarDoor", Vector3(10.0, 4.2, 0.16), Vector3(-176.0, 2.2, -105.35), Color(0.12, 0.18, 0.21), false)
+	_box("AirportControlTower", Vector3(5.0, 12.0, 5.0), Vector3(-82.0, 6.0, -115.0), Color(0.76, 0.78, 0.76), true)
+	_box("AirportTowerGlass", Vector3(5.2, 1.8, 5.2), Vector3(-82.0, 11.0, -115.0), Color(0.13, 0.34, 0.43), false)
+	_box("AirportTowerRoof", Vector3(6.0, 0.4, 6.0), Vector3(-82.0, 12.2, -115.0), Color(0.12, 0.18, 0.22), false)
+
+	# Lightweight parked aircraft silhouette; no heavy imported model required.
+	_box("AirportAircraftFuselage", Vector3(2.1, 1.5, 15.0), Vector3(-123.0, 1.4, -112.0), Color(0.83, 0.85, 0.83), false)
+	_box("AirportAircraftWing", Vector3(12.0, 0.22, 3.0), Vector3(-123.0, 1.6, -111.0), Color(0.76, 0.79, 0.78), false)
+	_box("AirportAircraftTail", Vector3(4.0, 1.3, 1.0), Vector3(-123.0, 2.0, -119.0), Color(0.78, 0.8, 0.79), false)
+	_box("AirportAircraftFin", Vector3(0.22, 2.4, 1.4), Vector3(-123.0, 2.6, -119.0), Color(0.8, 0.82, 0.81), false)
+	var airport_marker := Label3D.new()
+	airport_marker.text = "AIRPORT · FIRE & RESCUE ACCESS"
+	airport_marker.position = Vector3(-140.0, 4.0, -188.0)
+	airport_marker.font_size = 26
+	airport_marker.outline_size = 5
+	airport_marker.modulate = Color(1.0, 0.8, 0.28)
+	airport_marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	game_world.add_child(airport_marker)
+
 func _create_city_blocks() -> void:
 	var colors: Array[Color] = [Color(0.48,0.48,0.46), Color(0.42,0.46,0.5), Color(0.56,0.48,0.39), Color(0.34,0.42,0.47), Color(0.55,0.56,0.53)]
 	for x in [-165.0, -105.0, -45.0, 15.0, 75.0, 135.0]:
 		for z in [-165.0, -105.0, -45.0, 15.0, 75.0, 135.0]:
 			if absf(x) < 20 and absf(z - 18) < 18:
+				continue
+			# Reserve the northwest edge for the regional airport, runway and apron.
+			if x <= -105.0 and z <= -105.0:
 				continue
 			var civic_name := ""
 			if x == -105.0 and z == -105.0: civic_name = "CITY HALL"
