@@ -532,21 +532,8 @@ func _create_world() -> void:
 	sun.shadow_enabled = false
 	game_world.add_child(sun)
 	_box("Ground", Vector3(440, 1, 440), Vector3(0, -0.55, 0), Color(0.19, 0.29, 0.19), true)
-	# A cross-shaped road grid with sidewalks, intersections, markings, and parking bays.
-	for z in [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]:
-		_box("Street_NS", Vector3(12, 0.08, 440), Vector3(z, 0.0, 0), Color(0.105, 0.12, 0.14), false)
-		_box("Sidewalk_L", Vector3(2.0, 0.18, 440), Vector3(z - 7.0, 0.05, 0), Color(0.48, 0.49, 0.48), false)
-		_box("Sidewalk_R", Vector3(2.0, 0.18, 440), Vector3(z + 7.0, 0.05, 0), Color(0.48, 0.49, 0.48), false)
-	for x in [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]:
-		_box("Street_EW", Vector3(440, 0.08, 12), Vector3(0, 0.015, x), Color(0.105, 0.12, 0.14), false)
-		_box("Sidewalk_T", Vector3(440, 0.18, 2.0), Vector3(0, 0.05, x - 7.0), Color(0.48, 0.49, 0.48), false)
-		_box("Sidewalk_B", Vector3(440, 0.18, 2.0), Vector3(0, 0.05, x + 7.0), Color(0.48, 0.49, 0.48), false)
-	for z in range(-210, 220, 8):
-		for x in [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]:
-			_box("CenterLine", Vector3(0.16, 0.025, 3.4), Vector3(x, 0.06, float(z)), Color(0.95, 0.82, 0.35), false)
-	for x in range(-210, 220, 8):
-		for z in [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]:
-			_box("CenterLine", Vector3(3.4, 0.025, 0.16), Vector3(float(x), 0.06, z), Color(0.95, 0.82, 0.35), false)
+	# Real road pieces from the uploaded Kenney City Roads CC0 pack.
+	_create_road_network_from_pack()
 	_create_fire_station()
 	_create_city_blocks()
 	_create_trees()
@@ -554,6 +541,52 @@ func _create_world() -> void:
 	_create_crosswalks()
 	_create_district_markers()
 
+
+func _create_road_network_from_pack() -> void:
+	var road_root := "res://assets/city_roads/kenney_city_roads_glb_cc0_v1/models_glb/"
+	var straight_path := road_root + "road-straight.glb"
+	var cross_path := road_root + "road-crossroad.glb"
+	if not ResourceLoader.exists(straight_path) or not ResourceLoader.exists(cross_path):
+		# Safe fallback if the asset pack is absent in a local editor checkout.
+		for road_z in [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]:
+			_box("Street_NS_Fallback", Vector3(12, 0.08, 440), Vector3(road_z, 0.0, 0), Color(0.105, 0.12, 0.14), false)
+		for road_x in [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]:
+			_box("Street_EW_Fallback", Vector3(440, 0.08, 12), Vector3(0, 0.015, road_x), Color(0.105, 0.12, 0.14), false)
+		return
+
+	var road_lines: Array[float] = [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]
+	# Each intersection is a real GLB junction; straight road pieces fill the 60 m blocks.
+	for road_x in road_lines:
+		for road_z in road_lines:
+			_place_road_model("road-crossroad.glb", Vector3(road_x, 0.015, road_z))
+		for segment_z in range(-210, 211, 60):
+			_place_road_model("road-straight.glb", Vector3(road_x, 0.015, float(segment_z)), 0.0, Vector3(1.0, 1.0, 6.0))
+	for road_z in road_lines:
+		for segment_x in range(-210, 211, 60):
+			_place_road_model("road-straight.glb", Vector3(float(segment_x), 0.016, road_z), PI / 2.0, Vector3(1.0, 1.0, 6.0))
+
+	# Add small traffic details at major intersections without adding heavy collision meshes.
+	for road_x in [-120.0, 0.0, 120.0]:
+		for road_z in [-120.0, 0.0, 120.0]:
+			_place_road_model("road-intersection-line.glb", Vector3(road_x, 0.025, road_z), 0.0, Vector3(1.0, 1.0, 1.0))
+
+func _place_road_model(model_file: String, world_position: Vector3, rotation_y: float = 0.0, model_scale: Vector3 = Vector3.ONE) -> void:
+	var model_path := "res://assets/city_roads/kenney_city_roads_glb_cc0_v1/models_glb/" + model_file
+	if not ResourceLoader.exists(model_path):
+		return
+	var packed_model := load(model_path) as PackedScene
+	if packed_model == null:
+		push_warning("No se pudo cargar el modelo de calle: " + model_file)
+		return
+	var road_instance := packed_model.instantiate()
+	if not road_instance is Node3D:
+		road_instance.queue_free()
+		return
+	road_instance.name = model_file.get_basename().replace("-", "_")
+	road_instance.position = world_position
+	road_instance.rotation.y = rotation_y
+	road_instance.scale = model_scale
+	game_world.add_child(road_instance)
 
 func _create_district_markers() -> void:
 	var districts := [
