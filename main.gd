@@ -1496,11 +1496,70 @@ func _setup_player_animations(root: Node) -> void:
 	player_animation_player = _find_animation_player(root)
 	player_animation_names.clear()
 	player_motion_state = ""
+	# The free CC0 firefighter model is detailed but ships as a static mesh.
+	# Add lightweight AnimationPlayer clips so the imported model has distinct
+	# idle, walk, run and hose-use motion without external plugins or runtime cost.
 	if not is_instance_valid(player_animation_player):
-		return
+		player_animation_player = AnimationPlayer.new()
+		player_animation_player.name = "ProceduralAnimationPlayer"
+		root.add_child(player_animation_player)
+		player_animation_player.root_node = NodePath("..")
+		var library := AnimationLibrary.new()
+		library.add_animation("idle", _make_firefighter_motion("idle"))
+		library.add_animation("walk", _make_firefighter_motion("walk"))
+		library.add_animation("run", _make_firefighter_motion("run"))
+		library.add_animation("extinguish", _make_firefighter_motion("extinguish"))
+		player_animation_player.add_animation_library("", library)
 	for animation_name in player_animation_player.get_animation_list():
 		player_animation_names.append(StringName(animation_name))
 	_play_player_animation("idle")
+
+func _make_firefighter_motion(motion: String) -> Animation:
+	var animation := Animation.new()
+	var duration := 1.0
+	match motion:
+		"idle":
+			duration = 2.4
+		"walk":
+			duration = 0.72
+		"run":
+			duration = 0.46
+		"extinguish":
+			duration = 0.8
+	animation.length = duration
+	animation.loop_mode = Animation.LOOP_LINEAR
+	var position_track := animation.add_track(Animation.TYPE_VALUE)
+	animation.track_set_path(position_track, NodePath(".:position"))
+	animation.value_track_set_update_mode(position_track, Animation.UPDATE_CONTINUOUS)
+	var rotation_track := animation.add_track(Animation.TYPE_VALUE)
+	animation.track_set_path(rotation_track, NodePath(".:rotation"))
+	animation.value_track_set_update_mode(rotation_track, Animation.UPDATE_CONTINUOUS)
+	var base_position := Vector3.ZERO
+	var base_rotation := Vector3.ZERO
+	var times: Array[float] = []
+	var positions: Array[Vector3] = []
+	var rotations: Array[Vector3] = []
+	match motion:
+		"idle":
+			times = [0.0, 0.6, 1.2, 1.8, duration]
+			positions = [base_position, Vector3(0, 0.018, 0), base_position, Vector3(0, 0.012, 0), base_position]
+			rotations = [base_rotation, Vector3(0, 0, 0.008), base_rotation, Vector3(0, 0, -0.008), base_rotation]
+		"walk":
+			times = [0.0, duration * 0.25, duration * 0.5, duration * 0.75, duration]
+			positions = [base_position, Vector3(0, 0.035, 0), base_position, Vector3(0, 0.035, 0), base_position]
+			rotations = [Vector3(0, 0, -0.018), Vector3(0.012, 0, 0.018), Vector3(0, 0, -0.018), Vector3(-0.012, 0, 0.018), Vector3(0, 0, -0.018)]
+		"run":
+			times = [0.0, duration * 0.25, duration * 0.5, duration * 0.75, duration]
+			positions = [base_position, Vector3(0, 0.065, 0), base_position, Vector3(0, 0.065, 0), base_position]
+			rotations = [Vector3(deg_to_rad(-4), 0, -0.03), Vector3(deg_to_rad(-5), 0, 0.03), Vector3(deg_to_rad(-4), 0, -0.03), Vector3(deg_to_rad(-5), 0, 0.03), Vector3(deg_to_rad(-4), 0, -0.03)]
+		"extinguish":
+			times = [0.0, duration * 0.5, duration]
+			positions = [base_position, Vector3(0, 0.012, 0), base_position]
+			rotations = [Vector3(deg_to_rad(-7), 0, 0), Vector3(deg_to_rad(-9), 0, 0), Vector3(deg_to_rad(-7), 0, 0)]
+	for i in range(times.size()):
+		animation.track_insert_key(position_track, times[i], positions[i])
+		animation.track_insert_key(rotation_track, times[i], rotations[i])
+	return animation
 
 func _find_animation_player(node: Node) -> AnimationPlayer:
 	if node is AnimationPlayer:
@@ -1519,6 +1578,8 @@ func _play_player_animation(state: String) -> void:
 		preferred = ["run", "sprint", "jog", "walk"]
 	elif state == "walk":
 		preferred = ["walk", "move", "run", "jog"]
+	elif state == "extinguish":
+		preferred = ["extinguish", "hose", "work", "attack"]
 	else:
 		preferred = ["idle", "stand", "breath", "rest"]
 	for keyword in preferred:
@@ -1527,8 +1588,11 @@ func _play_player_animation(state: String) -> void:
 				player_animation_player.play(String(animation_name))
 				player_motion_state = state
 				return
-	# If the file contains only a differently named clip, use its first animation.
-	if state == "idle" and not player_animation_names.is_empty():
+	# Fall back to a known procedural clip when a source model uses unrelated names.
+	if player_animation_names.has(StringName(state)):
+		player_animation_player.play(state)
+		player_motion_state = state
+	elif state == "idle" and not player_animation_names.is_empty():
 		player_animation_player.play(String(player_animation_names[0]))
 		player_motion_state = state
 
@@ -2395,15 +2459,16 @@ func _physics_process(delta: float) -> void:
 	player.position.x = clampf(player.position.x, -WORLD_LIMIT, WORLD_LIMIT)
 	player.position.z = clampf(player.position.z, -WORLD_LIMIT, WORLD_LIMIT)
 	var planar_speed := Vector2(player.velocity.x, player.velocity.z).length()
-	# The included male OBJ is unrigged, so use subtle procedural movement instead of a missing AnimationPlayer.
+	# Select an authored AnimationPlayer clip for each firefighter state.
 	if is_instance_valid(player_visual):
-		if planar_speed < 0.2:
-			player_visual.position.y = move_toward(player_visual.position.y, 0.0, delta * 0.8)
-			player_visual.rotation.z = move_toward(player_visual.rotation.z, 0.0, delta * 1.8)
+		if extinguishing:
+			_play_player_animation("extinguish")
+		elif planar_speed < 0.2:
+			_play_player_animation("idle")
+		elif speed > WALK_SPEED:
+			_play_player_animation("run")
 		else:
-			player_anim_clock += delta * (11.0 if speed > WALK_SPEED else 7.5)
-			player_visual.position.y = absf(sin(player_anim_clock * 2.0)) * (0.035 if speed > WALK_SPEED else 0.018)
-			player_visual.rotation.z = sin(player_anim_clock) * (0.035 if speed > WALK_SPEED else 0.02)
+			_play_player_animation("walk")
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not game_active:
