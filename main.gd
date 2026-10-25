@@ -1386,10 +1386,6 @@ func _update_fire_visuals(delta: float) -> void:
 		flame.position.x = flame.position.x + sin(fire_elapsed * 0.8 + float(i)) * delta * 0.12
 	if is_instance_valid(fire_glow):
 		fire_glow.light_energy = 2.2 * intensity * (0.88 + 0.12 * sin(fire_elapsed * 8.0))
-	if is_instance_valid(fire_smoke):
-		fire_smoke.amount = 8 if OS.has_feature("mobile") else 18
-		fire_smoke.scale_amount_min = 0.5 + fire_elapsed * 0.01
-		fire_smoke.scale_amount_max = 1.5 + minf(fire_elapsed * 0.025, 0.9)
 	# Periodic small ignition patches give a readable, lightweight spread effect.
 	if fire_spread_timer >= 7.0 and fire_spread_patches.size() < 3:
 		fire_spread_timer = 0.0
