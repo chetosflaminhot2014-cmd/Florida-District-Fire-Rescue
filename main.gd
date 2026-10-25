@@ -217,6 +217,7 @@ func _process(delta: float) -> void:
 	_update_remote_network(delta)
 	_update_fire_response(delta)
 	_update_fire_visuals(delta)
+	_update_dispatch_arrival()
 	if is_instance_valid(minimap):
 		var tracked_position := vehicle.global_position if driving and is_instance_valid(vehicle) else (player.global_position if is_instance_valid(player) else Vector3.ZERO)
 		minimap.player_world_position = tracked_position
@@ -1212,6 +1213,8 @@ func _create_dispatch_system() -> void:
 	dispatch_layer.name = "DispatchSystem"
 	add_child(dispatch_layer)
 	dispatch_layer.call_accepted.connect(_on_dispatch_call_accepted)
+	dispatch_layer.mission_completed.connect(_on_mission_completed)
+	dispatch_layer.mission_failed.connect(_on_mission_failed)
 
 func _on_dispatch_call_accepted(location: Vector3, description: String) -> void:
 	dispatch_target_position = location
@@ -1241,6 +1244,37 @@ func _on_dispatch_call_accepted(location: Vector3, description: String) -> void:
 	if is_instance_valid(status_label):
 		status_label.text = "911 ASIGNADO: " + description + " · Coordenadas %.0f, %.0f" % [location.x, location.z]
 
+
+func _update_dispatch_arrival() -> void:
+	if not dispatch_target_active or fire_active:
+		return
+	var responder_position := vehicle.global_position if driving and is_instance_valid(vehicle) else (player.global_position if is_instance_valid(player) else Vector3.ZERO)
+	if responder_position.distance_to(dispatch_target_position) > 11.0:
+		return
+	dispatch_target_active = false
+	if is_instance_valid(dispatch_marker):
+		dispatch_marker.queue_free()
+		dispatch_marker = null
+	if is_instance_valid(minimap):
+		minimap.target_active = false
+		minimap.queue_redraw()
+	if is_instance_valid(dispatch_layer):
+		dispatch_layer.call("complete_arrival_mission")
+
+func _on_mission_completed(reward: int, description: String) -> void:
+	if is_instance_valid(status_label):
+		status_label.text = "SERVICIO COMPLETADO · %s · +%d créditos" % [description, reward]
+
+func _on_mission_failed(description: String) -> void:
+	dispatch_target_active = false
+	if is_instance_valid(dispatch_marker):
+		dispatch_marker.queue_free()
+		dispatch_marker = null
+	if is_instance_valid(minimap):
+		minimap.target_active = false
+		minimap.queue_redraw()
+	if is_instance_valid(status_label):
+		status_label.text = "LLAMADA VENCIDA · %s" % description
 
 func _toggle_extinguishing() -> void:
 	if not game_active:
@@ -1449,6 +1483,8 @@ func _update_fire_response(delta: float) -> void:
 			if is_instance_valid(minimap):
 				minimap.target_active = false
 				minimap.queue_redraw()
+			if is_instance_valid(dispatch_layer):
+				dispatch_layer.call("complete_fire_mission")
 			if is_instance_valid(status_label):
 				status_label.text = "INCENDIO CONTROLADO · Unidad disponible"
 	elif extinguishing and is_instance_valid(status_label):
