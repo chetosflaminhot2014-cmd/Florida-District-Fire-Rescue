@@ -1744,14 +1744,24 @@ func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size
 	b.button_down.connect(on_down)
 	if on_up.is_valid():
 		b.button_up.connect(on_up)
-	if label_text == "USAR / BAJAR":
+	if label_text == "USAR" or label_text == "USAR / BAJAR":
 		b.pressed.connect(_interact_vehicle)
+	elif label_text == "MANGUERA":
+		b.pressed.connect(_toggle_extinguishing)
 	elif label_text == "CÁMARA":
 		b.pressed.connect(_toggle_vehicle_camera)
 	elif label_text == "SIRENA":
 		b.pressed.connect(_toggle_siren)
 	elif label_text == "LUCES":
 		b.pressed.connect(_toggle_emergency_lights)
+	elif label_text == "CORRER":
+		b.button_down.connect(func(): touch_run = true)
+		b.button_up.connect(func(): touch_run = false)
+	elif label_text == "FRENO":
+		b.button_down.connect(func(): touch_brake = true)
+		b.button_up.connect(func(): touch_brake = false)
+	elif label_text == "REPOSTAR":
+		b.pressed.connect(_try_refuel)
 
 func _toggle_secondary_controls() -> void:
 	secondary_controls_open = not secondary_controls_open
