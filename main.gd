@@ -828,11 +828,16 @@ func _create_osm_city_map() -> bool:
 		var height := clampf(float(building.get("h", 6.0)), 5.5, 30.0)
 		var target_size := Vector3(width, height, depth)
 		var footprint_data: Array = building.get("footprint", [])
-		if footprint_data.size() >= 3:
-			_create_osm_footprint_building(footprint_data, height, str(building.get("kind", "building")), building_index)
-		else:
-			var variant_index := posmod(hash(str(building.get("kind", "building")) + str(building_index)), max(1, FLORIDA_BUILDING_SCENES.size()))
-			if not _try_create_asset_building(Vector3(x, 0.0, z), target_size, variant_index, "Tampa_OSM_Building"):
+		var building_kind := str(building.get("kind", "building"))
+		var variant_index := posmod(hash(building_kind + str(building_index)), max(1, FLORIDA_BUILDING_SCENES.size()))
+		# First choice: actual textured GLB architecture from the free city asset kits.
+		# Keep the surveyed OSM position and approximate dimensions so the street layout
+		# remains tied to real map data, while avoiding hundreds of plain extruded roofs.
+		var placed_asset := _try_create_asset_building(Vector3(x, 0.0, z), target_size, variant_index, "Tampa_OSM_AssetBuilding")
+		if not placed_asset:
+			if footprint_data.size() >= 3:
+				_create_osm_footprint_building(footprint_data, height, building_kind, building_index)
+			else:
 				_box("Tampa_OSM_Building_Fallback", target_size, Vector3(x, height * 0.5, z), Color(0.45, 0.49, 0.51), true)
 		building_count += 1
 
