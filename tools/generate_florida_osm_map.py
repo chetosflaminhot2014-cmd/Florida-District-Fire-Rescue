@@ -13,13 +13,12 @@ import time
 import urllib.parse
 import urllib.request
 
-# Downtown Tampa, Florida. Keep the geographic bounds close to the playable
-# world size so real OSM road spacing and building footprints are not crushed
-# into a tiny area. The 410 m square is a drivable downtown district for mobile.
-SOUTH, WEST, NORTH, EAST = 27.9487, -82.4604, 27.9523, -82.4562
+# Downtown Tampa, Florida. The playable area is expanded to an 800 m
+# square so responders can drive between more neighborhoods and incidents.
+SOUTH, WEST, NORTH, EAST = 27.9469, -82.4627, 27.9541, -82.4539
 CENTER_LAT = (SOUTH + NORTH) / 2.0
 CENTER_LON = (WEST + EAST) / 2.0
-WORLD_SPAN = 410.0
+WORLD_SPAN = 800.0
 WORLD_LIMIT = WORLD_SPAN / 2.0
 METERS_PER_DEG_LAT = 111320.0
 METERS_PER_DEG_LON = 111320.0 * math.cos(math.radians(CENTER_LAT))
@@ -141,7 +140,7 @@ def main():
     result = {
         "source": "OpenStreetMap contributors",
         "license": "ODbL-1.0",
-        "area": "Downtown Tampa, Florida, USA (approx. 410 m playable district)",
+        "area": "Downtown Tampa, Florida, USA (approx. 800 m playable district)",
         "bounds": {"south": SOUTH, "west": WEST, "north": NORTH, "east": EAST},
         "world_span": WORLD_SPAN,
         "roads": roads,
