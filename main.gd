@@ -743,18 +743,116 @@ func _create_world() -> void:
 	world_sun.shadow_enabled = graphics_quality >= 2 and not OS.has_feature("mobile")
 	game_world.add_child(world_sun)
 	_box("Ground", Vector3(440, 1, 440), Vector3(0, -0.55, 0), Color(0.19, 0.29, 0.19), true)
-	# Real road pieces from the uploaded Kenney City Roads CC0 pack.
-	_create_road_network_from_pack()
+	# Prefer the real Downtown Tampa street layout from OpenStreetMap.
+	# Keep the lightweight CC0 grid as a fallback if map data has not been generated yet.
+	var has_real_city_map := _create_osm_city_map()
+	if not has_real_city_map:
+		_create_road_network_from_pack()
 	_create_fire_station()
-	_create_city_blocks()
+	if not has_real_city_map:
+		_create_city_blocks()
 	_create_hospital_complex()
 	_create_airport()
 	_create_gas_stations()
 	_create_trees()
-	_create_street_furniture()
-	_create_crosswalks()
-	_create_district_markers()
+	if not has_real_city_map:
+		_create_street_furniture()
+		_create_crosswalks()
+		_create_district_markers()
+	else:
+		_create_osm_map_signage()
 	_apply_graphics_quality()
+
+
+func _create_osm_city_map() -> bool:
+	var map_path := "res://assets/florida_city/tampa_osm_map.json"
+	if not FileAccess.file_exists(map_path):
+		push_warning("No se encontró el mapa OSM de Tampa; se usará la ciudad de respaldo.")
+		return false
+	var raw_json := FileAccess.get_file_as_string(map_path)
+	var parsed: Variant = JSON.parse_string(raw_json)
+	if not parsed is Dictionary:
+		push_warning("El archivo del mapa OSM no es válido; se usará la ciudad de respaldo.")
+		return false
+	var map_data: Dictionary = parsed
+	var roads: Array = map_data.get("roads", [])
+	var buildings: Array = map_data.get("buildings", [])
+	if roads.is_empty():
+		push_warning("El mapa OSM no contiene calles; se usará la ciudad de respaldo.")
+		return false
+
+	var asphalt := Color(0.075, 0.085, 0.095)
+	var road_count := 0
+	for road_variant in roads:
+		if not road_variant is Dictionary:
+			continue
+		var road: Dictionary = road_variant
+		var points: Array = road.get("points", [])
+		var width := float(road.get("width", 4.0))
+		for point_index in range(points.size() - 1):
+			var a_data: Array = points[point_index]
+			var b_data: Array = points[point_index + 1]
+			if a_data.size() < 2 or b_data.size() < 2:
+				continue
+			var a := Vector2(float(a_data[0]), float(a_data[1]))
+			var b := Vector2(float(b_data[0]), float(b_data[1]))
+			var segment := b - a
+			var segment_length := segment.length()
+			if segment_length < 0.35:
+				continue
+			var road_piece := _box("OSM_Road_Segment", Vector3(width, 0.12, segment_length + 0.25), Vector3((a.x + b.x) * 0.5, 0.035, (a.y + b.y) * 0.5), asphalt, false)
+			road_piece.rotation.y = atan2(segment.x, segment.y)
+			road_count += 1
+
+	var building_count := 0
+	for building_index in range(buildings.size()):
+		var building_variant: Variant = buildings[building_index]
+		if not building_variant is Dictionary:
+			continue
+		var building: Dictionary = building_variant
+		var x := float(building.get("x", 0.0))
+		var z := float(building.get("z", 0.0))
+		# Reserve clear footprints for the playable emergency facilities and fuel stops.
+		var reserved := false
+		for facility_position in [Vector2(60, 115), Vector2(75, -105), Vector2(-140, -145), Vector2(-150, 15), Vector2(150, -150), Vector2(-150, 150), Vector2(150, 150)]:
+			if Vector2(x, z).distance_to(facility_position) < 24.0:
+				reserved = true
+				break
+		if reserved:
+			continue
+		var width := clampf(float(building.get("w", 8.0)), 5.0, 17.0)
+		var depth := clampf(float(building.get("d", 8.0)), 5.0, 17.0)
+		var height := clampf(float(building.get("h", 6.0)), 5.5, 30.0)
+		var target_size := Vector3(width, height, depth)
+		var variant_index := posmod(hash(str(building.get("kind", "building")) + str(building_index)), FLORIDA_BUILDING_SCENES.size())
+		if not _try_create_asset_building(Vector3(x, 0.0, z), target_size, variant_index, "Tampa_OSM_Building"):
+			_box("Tampa_OSM_Building_Fallback", target_size, Vector3(x, height * 0.5, z), Color(0.45, 0.49, 0.51), true)
+		building_count += 1
+
+	print("F.D.F.R. real map loaded: Downtown Tampa, ", road_count, " road segments, ", building_count, " buildings.")
+	return true
+
+
+func _create_osm_map_signage() -> void:
+	var title := Label3D.new()
+	title.name = "RealMapAreaLabel"
+	title.text = "DOWNTOWN TAMPA · FLORIDA"
+	title.position = Vector3(-110.0, 10.0, -185.0)
+	title.font_size = 38
+	title.outline_size = 7
+	title.modulate = Color(0.95, 0.84, 0.58)
+	title.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	game_world.add_child(title)
+
+	var credit := Label3D.new()
+	credit.name = "OpenStreetMapAttribution"
+	credit.text = "Map data © OpenStreetMap contributors"
+	credit.position = Vector3(0.0, 1.5, 207.0)
+	credit.font_size = 20
+	credit.outline_size = 4
+	credit.modulate = Color(0.93, 0.95, 0.96)
+	credit.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	game_world.add_child(credit)
 
 
 func _create_road_network_from_pack() -> void:
