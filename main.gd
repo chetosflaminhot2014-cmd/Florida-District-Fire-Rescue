@@ -829,11 +829,19 @@ func _create_osm_city_map() -> bool:
 		var target_size := Vector3(width, height, depth)
 		var footprint_data: Array = building.get("footprint", [])
 		var building_kind := str(building.get("kind", "building"))
-		var variant_index := posmod(hash(building_kind + str(building_index)), max(1, FLORIDA_BUILDING_SCENES.size()))
-		# First choice: actual textured GLB architecture from the free city asset kits.
-		# Keep the surveyed OSM position and approximate dimensions so the street layout
-		# remains tied to real map data, while avoiding hundreds of plain extruded roofs.
-		var placed_asset := _try_create_asset_building(Vector3(x, 0.0, z), target_size, variant_index, "Tampa_OSM_AssetBuilding")
+		# Choose architecture by actual map classification instead of scattering the same
+		# suburban house models through every district.
+		var kind_key := building_kind.to_lower()
+		var placed_asset := false
+		if height >= 19.0 and (kind_key in ["commercial", "office", "hotel", "apartments"] or width >= 12.0):
+			var tower_index := posmod(hash(building_kind + str(building_index)), FLORIDA_SKYSCRAPER_SCENES.size())
+			placed_asset = _try_create_building_from_path(FLORIDA_SKYSCRAPER_SCENES[tower_index], Vector3(x, 0.0, z), target_size, "Tampa_OSM_Skyscraper")
+		elif kind_key in ["commercial", "office", "hotel", "apartments", "retail", "industrial", "warehouse"]:
+			var commercial_index := posmod(hash(building_kind + str(building_index)), FLORIDA_DOWNTOWN_SCENES.size())
+			placed_asset = _try_create_building_from_path(FLORIDA_DOWNTOWN_SCENES[commercial_index], Vector3(x, 0.0, z), target_size, "Tampa_OSM_Commercial")
+		else:
+			var residential_index := posmod(hash(building_kind + str(building_index)), FLORIDA_BUILDING_SCENES.size())
+			placed_asset = _try_create_asset_building(Vector3(x, 0.0, z), target_size, residential_index, "Tampa_OSM_Residential")
 		if not placed_asset:
 			if footprint_data.size() >= 3:
 				_create_osm_footprint_building(footprint_data, height, building_kind, building_index)
@@ -1377,12 +1385,16 @@ func _fit_imported_model(model: Node3D, target_size: Vector3) -> void:
 	if bounds.size.x <= 0.001 or bounds.size.y <= 0.001 or bounds.size.z <= 0.001:
 		model.position.y = 0.05
 		return
-	var factor := minf(target_size.x / bounds.size.x, minf(target_size.y / bounds.size.y, target_size.z / bounds.size.z))
-	if not is_finite(factor) or factor <= 0.0:
+	# Fit each axis to the measured footprint. Uniform scaling previously made many
+	# imported houses tiny inside their real map parcels, which looked like toy blocks.
+	var sx := target_size.x / bounds.size.x
+	var sy := target_size.y / bounds.size.y
+	var sz := target_size.z / bounds.size.z
+	if not is_finite(sx) or not is_finite(sy) or not is_finite(sz) or sx <= 0.0 or sy <= 0.0 or sz <= 0.0:
 		model.position.y = 0.05
 		return
-	model.scale = Vector3.ONE * factor
-	model.position.y = -bounds.position.y * factor + 0.05
+	model.scale = Vector3(sx, sy, sz)
+	model.position.y = -bounds.position.y * sy + 0.05
 
 func _get_model_local_bounds(model: Node3D) -> AABB:
 	var combined := AABB()
