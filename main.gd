@@ -2544,10 +2544,9 @@ func _create_earth2road_city_map() -> bool:
 		if packed_map == null:
 			push_warning("La escena Earth2Road existe pero Godot no pudo cargarla: " + scene_path)
 			continue
-		var map_instance := packed_map.instantiate()
-		if not map_instance is Node3D:
+		var map_instance := packed_map.instantiate() as Node3D
+		if map_instance == null:
 			push_warning("La escena Earth2Road debe tener un nodo raíz Node3D: " + scene_path)
-			map_instance.queue_free()
 			continue
 		map_instance.name = "Earth2Road_Tampa_City"
 		map_instance.position = Vector3.ZERO
