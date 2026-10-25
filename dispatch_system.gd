@@ -55,6 +55,7 @@ func _process(delta: float) -> void:
 		if _mission_time_left <= 0.0:
 			var failed_description := _active_description
 			_mission_active = false
+			_active_description = ""
 			_log("CENTRAL", "Tiempo agotado: " + failed_description + ". Unidad disponible.")
 			_call_label.text = "SERVICIO DISPONIBLE\nLa llamada anterior venció. Espera el siguiente aviso."
 			mission_failed.emit(failed_description)
