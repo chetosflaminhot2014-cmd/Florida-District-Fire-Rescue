@@ -126,6 +126,13 @@ var fire_location := Vector3.ZERO
 var extinguishing := false
 var fire_visual: Node3D
 var fire_glow: OmniLight3D
+var fire_flames: Array[MeshInstance3D] = []
+var fire_spread_patches: Array[MeshInstance3D] = []
+var fire_elapsed := 0.0
+var fire_spread_timer := 0.0
+var fire_smoke: CPUParticles3D
+var fire_particles: CPUParticles3D
+var fire_embers: CPUParticles3D
 var water_drops: Array[MeshInstance3D] = []
 var gas_station_positions: Array[Vector3] = []
 var fuel_level := 100.0
@@ -209,6 +216,7 @@ func _process(delta: float) -> void:
 	_update_npcs(delta)
 	_update_remote_network(delta)
 	_update_fire_response(delta)
+	_update_fire_visuals(delta)
 	if is_instance_valid(minimap):
 		var tracked_position := vehicle.global_position if driving and is_instance_valid(vehicle) else (player.global_position if is_instance_valid(player) else Vector3.ZERO)
 		minimap.player_world_position = tracked_position
@@ -1274,26 +1282,46 @@ func _spawn_fire(location: Vector3) -> void:
 		fire_visual.queue_free()
 	fire_location = location
 	fire_strength = 100.0
+	fire_elapsed = 0.0
+	fire_spread_timer = 0.0
 	fire_active = true
+	fire_flames.clear()
+	fire_spread_patches.clear()
 	fire_visual = Node3D.new()
 	fire_visual.name = "ActiveFire"
 	fire_visual.position = location
 	game_world.add_child(fire_visual)
-	for i in range(5):
+	var mobile_quality := OS.has_feature("mobile")
+	# Layered, emissive flame meshes keep a visible core even on low-end devices.
+	for i in range(7):
 		var flame := MeshInstance3D.new()
+		flame.name = "FlameCore_%02d" % i
 		var sphere := SphereMesh.new()
-		sphere.radius = 0.65 + float(i % 3) * 0.18
+		sphere.radius = 0.48 + float(i % 3) * 0.16
 		sphere.height = sphere.radius * 2.0
 		flame.mesh = sphere
-		flame.position = Vector3(rng.randf_range(-1.0, 1.0), 0.7 + float(i) * 0.55, rng.randf_range(-0.8, 0.8))
+		flame.position = Vector3(rng.randf_range(-0.9, 0.9), 0.45 + float(i) * 0.42, rng.randf_range(-0.75, 0.75))
 		var mat := StandardMaterial3D.new()
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.albedo_color = Color(1.0, 0.18 + float(i % 2) * 0.18, 0.015, 0.88)
+		mat.albedo_color = Color(1.0, 0.16 + float(i % 3) * 0.16, 0.015, 0.92)
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		mat.emission_enabled = true
-		mat.emission = Color(1.0, 0.12, 0.01)
+		mat.emission = Color(1.0, 0.16 + float(i % 2) * 0.08, 0.015)
 		flame.material_override = mat
 		fire_visual.add_child(flame)
+		fire_flames.append(flame)
+	# CPU particles are used for compatibility with both the mobile and desktop renderers.
+	fire_particles = _make_fire_particles("FlameParticles", 22 if mobile_quality else 52, 0.9, Vector3(0, 1, 0), 34.0, 2.0, 4.6, Vector3(0, -1.2, 0), 0.22, 0.75, Color(1.0, 0.72, 0.08, 1.0), Color(1.0, 0.12, 0.015, 0.0))
+	fire_particles.position.y = 0.5
+	fire_visual.add_child(fire_particles)
+	# Dark smoke rises above the fire and expands as the incident grows.
+	fire_smoke = _make_fire_particles("SmokeParticles", 18 if mobile_quality else 42, 3.2, Vector3(0, 1, 0), 18.0, 0.65, 1.8, Vector3(0, 0.18, 0), 0.45, 1.65, Color(0.16, 0.17, 0.19, 0.78), Color(0.24, 0.25, 0.27, 0.0))
+	fire_smoke.position.y = 1.4
+	fire_visual.add_child(fire_smoke)
+	# Sparse glowing embers hint at fire spread without spawning expensive full fire simulations.
+	fire_embers = _make_fire_particles("EmberParticles", 8 if mobile_quality else 20, 1.5, Vector3(0, 1, 0), 48.0, 1.4, 3.8, Vector3(0, -2.6, 0), 0.045, 0.12, Color(1.0, 0.34, 0.035, 1.0), Color(1.0, 0.12, 0.015, 0.0))
+	fire_embers.position.y = 0.65
+	fire_visual.add_child(fire_embers)
 	fire_glow = OmniLight3D.new()
 	fire_glow.light_color = Color(1.0, 0.22, 0.035)
 	fire_glow.light_energy = 2.2
@@ -1301,6 +1329,92 @@ func _spawn_fire(location: Vector3) -> void:
 	fire_glow.shadow_enabled = false
 	fire_glow.position.y = 2.0
 	fire_visual.add_child(fire_glow)
+
+func _make_fire_particles(node_name: String, particle_count: int, particle_lifetime: float, emission_direction: Vector3, particle_spread: float, velocity_min: float, velocity_max: float, particle_gravity: Vector3, scale_minimum: float, scale_maximum: float, start_color: Color, end_color: Color) -> CPUParticles3D:
+	var particles := CPUParticles3D.new()
+	particles.name = node_name
+	particles.amount = particle_count
+	particles.lifetime = particle_lifetime
+	particles.explosiveness = 0.0
+	particles.randomness = 0.45
+	particles.local_coords = true
+	particles.emitting = true
+	var process_material := ParticleProcessMaterial.new()
+	process_material.direction = emission_direction
+	process_material.spread = particle_spread
+	process_material.initial_velocity_min = velocity_min
+	process_material.initial_velocity_max = velocity_max
+	process_material.gravity = particle_gravity
+	process_material.scale_min = scale_minimum
+	process_material.scale_max = scale_maximum
+	var color_gradient := Gradient.new()
+	color_gradient.set_color(0, start_color)
+	color_gradient.add_point(0.55, Color(start_color.r, start_color.g, start_color.b, start_color.a * 0.55))
+	color_gradient.set_color(1, end_color)
+	var color_texture := GradientTexture1D.new()
+	color_texture.gradient = color_gradient
+	process_material.color_ramp = color_texture
+	particles.process_material = process_material
+	var particle_mesh := SphereMesh.new()
+	particle_mesh.radius = 0.22
+	particle_mesh.height = 0.44
+	var particle_material := StandardMaterial3D.new()
+	particle_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	particle_material.vertex_color_use_as_albedo = true
+	particle_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	particle_material.emission_enabled = true
+	particle_material.emission = start_color
+	particles.draw_pass_1 = particle_mesh
+	particles.material_override = particle_material
+	particles.visibility_aabb = AABB(Vector3(-8, -2, -8), Vector3(16, 18, 16))
+	return particles
+
+func _update_fire_visuals(delta: float) -> void:
+	if not fire_active or not is_instance_valid(fire_visual):
+		return
+	fire_elapsed += delta
+	fire_spread_timer += delta
+	var intensity := clampf(fire_strength / 100.0, 0.0, 1.0)
+	# Animate each flame independently to avoid the old static-sphere appearance.
+	for i in range(fire_flames.size()):
+		var flame := fire_flames[i]
+		if not is_instance_valid(flame):
+			continue
+		var pulse := 1.0 + sin(fire_elapsed * (5.0 + float(i) * 0.7) + float(i)) * 0.17
+		var spread_growth := 1.0 + minf(fire_elapsed / 32.0, 0.5)
+		flame.scale = Vector3(pulse * spread_growth, pulse * (1.0 + 0.12 * sin(fire_elapsed * 7.0 + float(i))), pulse * spread_growth) * maxf(0.22, intensity)
+		flame.position.x = flame.position.x + sin(fire_elapsed * 0.8 + float(i)) * delta * 0.12
+	if is_instance_valid(fire_glow):
+		fire_glow.light_energy = 2.2 * intensity * (0.88 + 0.12 * sin(fire_elapsed * 8.0))
+	if is_instance_valid(fire_smoke):
+		fire_smoke.amount = 8 if OS.has_feature("mobile") else 18
+		fire_smoke.scale_amount_min = 0.5 + fire_elapsed * 0.01
+		fire_smoke.scale_amount_max = 1.5 + minf(fire_elapsed * 0.025, 0.9)
+	# Periodic small ignition patches give a readable, lightweight spread effect.
+	if fire_spread_timer >= 7.0 and fire_spread_patches.size() < 3:
+		fire_spread_timer = 0.0
+		var patch := MeshInstance3D.new()
+		patch.name = "SpreadIgnition_%02d" % fire_spread_patches.size()
+		var patch_mesh := SphereMesh.new()
+		patch_mesh.radius = 0.28
+		patch_mesh.height = 0.8
+		patch.mesh = patch_mesh
+		patch.position = Vector3(rng.randf_range(-3.2, 3.2), 0.38, rng.randf_range(-2.8, 2.8))
+		var patch_material := StandardMaterial3D.new()
+		patch_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		patch_material.albedo_color = Color(1.0, 0.22, 0.015, 0.88)
+		patch_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		patch_material.emission_enabled = true
+		patch_material.emission = Color(1.0, 0.12, 0.01)
+		patch.material_override = patch_material
+		patch.scale = Vector3(0.15, 0.15, 0.15)
+		fire_visual.add_child(patch)
+		fire_spread_patches.append(patch)
+	for i in range(fire_spread_patches.size()):
+		var patch := fire_spread_patches[i]
+		if is_instance_valid(patch):
+			var patch_pulse := 0.7 + 0.3 * sin(fire_elapsed * 5.5 + float(i))
+			patch.scale = Vector3.ONE * patch_pulse * minf(1.0, fire_elapsed / 10.0)
 
 func _update_fire_response(delta: float) -> void:
 	if not fire_active:
