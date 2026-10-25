@@ -154,12 +154,8 @@ func _ready() -> void:
 	# Draw a safe startup screen first. If the full menu encounters a runtime
 	# error, this overlay remains visible instead of leaving a blank grey screen.
 	var startup_fallback := _create_startup_fallback()
-	# Keep a valid active camera while the menu is shown on Android and desktop.
-	var menu_camera := Camera3D.new()
-	menu_camera.name = "MenuCamera"
-	menu_camera.position = Vector3(0, 2, 10)
-	add_child(menu_camera)
-	menu_camera.current = true
+	# Render a 3D station and fire engine behind the menu instead of a flat color screen.
+	_create_menu_scene_preview()
 	_create_menu()
 	startup_fallback.queue_free()
 	if has_node("/root/MultiplayerLobby"):
@@ -247,13 +243,114 @@ func _create_menu() -> void:
 	menu_layer = CanvasLayer.new()
 	menu_layer.name = "MenuLayer"
 	menu_layer.layer = 5
-	add_child(menu_layer)
+	add_chilfunc _create_menu_scene_preview() -> void:
+	var preview := Node3D.new()
+	preview.name = "MenuScenePreview"
+	add_child(preview)
+
+	var environment_node := WorldEnvironment.new()
+	var environment := Environment.new()
+	environment.background_mode = Environment.BG_COLOR
+	environment.background_color = Color(0.16, 0.22, 0.29)
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.ambient_light_color = Color(0.72, 0.78, 0.88)
+	environment.ambient_light_energy = 0.85
+	environment_node.environment = environment
+	preview.add_child(environment_node)
+
+	var sun := DirectionalLight3D.new()
+	sun.rotation_degrees = Vector3(-38, -28, 0)
+	sun.light_energy = 1.4
+	sun.shadow_enabled = not OS.has_feature("mobile")
+	preview.add_child(sun)
+
+	# Asphalt forecourt and concrete apron.
+	_menu_preview_box(preview, "PreviewGround", Vector3(42, 0.25, 34), Vector3(0, -0.2, 0), Color(0.12, 0.14, 0.16))
+	_menu_preview_box(preview, "StationApron", Vector3(22, 0.06, 12), Vector3(0, -0.045, -2.5), Color(0.31, 0.32, 0.31))
+	_menu_preview_box(preview, "ApronLineLeft", Vector3(0.12, 0.025, 8), Vector3(-7.2, 0.005, 1.2), Color(0.92, 0.84, 0.62))
+	_menu_preview_box(preview, "ApronLineRight", Vector3(0.12, 0.025, 8), Vector3(7.2, 0.005, 1.2), Color(0.92, 0.84, 0.62))
+
+	# Station facade, roof trim and two tall engine bays facing the camera.
+	_menu_preview_box(preview, "PreviewStation", Vector3(16, 6.2, 5.8), Vector3(0, 3.1, -6.3), Color(0.37, 0.085, 0.075))
+	_menu_preview_box(preview, "PreviewStationRoof", Vector3(16.5, 0.28, 6.2), Vector3(0, 6.25, -6.3), Color(0.075, 0.09, 0.11))
+	_menu_preview_box(preview, "PreviewStationBase", Vector3(16.2, 0.28, 0.25), Vector3(0, 0.2, -3.35), Color(0.78, 0.78, 0.72))
+	for bay_x in [-4.0, 4.0]:
+		_menu_preview_box(preview, "PreviewBayDoor", Vector3(5.1, 4.0, 0.18), Vector3(bay_x, 2.25, -3.34), Color(0.07, 0.12, 0.16))
+		for stripe in range(5):
+			_menu_preview_box(preview, "PreviewBayStripe", Vector3(4.7, 0.065, 0.035), Vector3(bay_x, 0.65 + float(stripe) * 0.78, -3.22), Color(0.55, 0.61, 0.65))
+	_menu_preview_box(preview, "PreviewSignBoard", Vector3(9.0, 0.82, 0.18), Vector3(0, 5.25, -3.28), Color(0.065, 0.08, 0.1))
+	var station_sign := Label3D.new()
+	station_sign.text = "F.D.F.R.  •  STATION 01"
+	station_sign.position = Vector3(0, 5.28, -3.14)
+	station_sign.font_size = 42
+	station_sign.outline_size = 8
+	station_sign.modulate = Color(1.0, 0.82, 0.58)
+	station_sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	preview.add_child(station_sign)
+
+	# Use the project's actual fire truck model. If it is missing, draw a readable fallback truck.
+	var truck_path := "res://fire_truck.glb"
+	if ResourceLoader.exists(truck_path):
+		var truck_scene := load(truck_path) as PackedScene
+		if truck_scene != null:
+			var truck := truck_scene.instantiate() as Node3D
+			if truck != null:
+				truck.name = "MenuFireEngine"
+				truck.position = Vector3(0.0, 0.0, 2.2)
+				preview.add_child(truck)
+				_fit_imported_model(truck, Vector3(3.7, 3.7, 8.6))
+	else:
+		_menu_preview_box(preview, "FallbackTruckBody", Vector3(3.1, 2.1, 6.6), Vector3(0, 1.25, 2.2), Color(0.72, 0.055, 0.045))
+		_menu_preview_box(preview, "FallbackTruckCab", Vector3(2.8, 1.6, 2.1), Vector3(0, 2.65, 4.1), Color(0.78, 0.075, 0.055))
+		_menu_preview_box(preview, "FallbackTruckWindshield", Vector3(2.25, 0.82, 0.06), Vector3(0, 2.85, 5.18), Color(0.09, 0.19, 0.25))
+		_menu_preview_box(preview, "FallbackTruckLightbar", Vector3(1.65, 0.18, 0.32), Vector3(0, 3.55, 4.0), Color(0.95, 0.05, 0.035))
+	for wheel_x in [-1.58, 1.58]:
+		for wheel_z in [-0.05, 3.85]:
+			var wheel := MeshInstance3D.new()
+			wheel.name = "PreviewTruckWheel"
+			var wheel_mesh := CylinderMesh.new()
+			wheel_mesh.top_radius = 0.48
+			wheel_mesh.bottom_radius = 0.48
+			wheel_mesh.height = 0.28
+			wheel.mesh = wheel_mesh
+			wheel.position = Vector3(wheel_x, 0.48, 2.2 + wheel_z)
+			wheel.rotation_degrees.z = 90
+			var wheel_material := StandardMaterial3D.new()
+			wheel_material.albedo_color = Color(0.025, 0.03, 0.035)
+			wheel.mesh.surface_set_material(0, wheel_material)
+			preview.add_child(wheel)
+
+	var camera := Camera3D.new()
+	camera.name = "MenuCamera"
+	camera.fov = 48.0
+	camera.position = Vector3(10.5, 7.2, 15.5)
+	preview.add_child(camera)
+	camera.look_at(Vector3(0, 2.1, -1.0), Vector3.UP)
+	camera.current = true
+
+
+func _menu_preview_box(parent: Node3D, node_name: String, box_size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
+	var instance := MeshInstance3D.new()
+	instance.name = node_name
+	var mesh := BoxMesh.new()
+	mesh.size = box_size
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.82
+	mesh.material = material
+	instance.mesh = mesh
+	instance.position = pos
+	parent.add_child(instance)
+	return instance
+
+
+d(menu_layer)
 
 	# F.D.F.R. cinematic command screen: restrained emergency-red accents,
 	# clear action hierarchy, and a compact layout for portrait mobile screens.
 	var background := ColorRect.new()
 	background.name = "MenuBackground"
-	background.color = Color(0.018, 0.026, 0.038)
+	background.color = Color(0.018, 0.026, 0.038, 0.28)
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu_layer.add_child(background)
@@ -264,7 +361,7 @@ func _create_menu() -> void:
 	scene_tint.anchor_right = 1.0
 	scene_tint.anchor_top = 0.0
 	scene_tint.anchor_bottom = 1.0
-	scene_tint.color = Color(0.075, 0.025, 0.025, 0.92)
+	scene_tint.color = Color(0.075, 0.025, 0.025, 0.42)
 	scene_tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu_layer.add_child(scene_tint)
 
