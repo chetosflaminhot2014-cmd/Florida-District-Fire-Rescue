@@ -36,13 +36,14 @@ var _calls := [
 	{"type": "Rescate en edificio público", "code": "RESCUE-4", "unit": "MOTOR 1 / RESCATE", "reward": 240, "priority": "PRIORIDAD ALTA", "fire": false}
 ]
 var _locations := [
+	# Targets sit in the blocks beside the road grid, not directly on the center lines.
 	{"name": "Downtown", "position": Vector3(-30, 0, -30)},
 	{"name": "North Residential", "position": Vector3(15, 0, -150)},
-	{"name": "East Industrial", "position": Vector3(150, 0, 15)},
+	{"name": "East Industrial", "position": Vector3(135, 0, 15)},
 	{"name": "Civic District", "position": Vector3(-150, 0, 75)},
-	{"name": "South Gardens", "position": Vector3(15, 0, 150)},
-	{"name": "Mirage Fuel East", "position": Vector3(150, 0, 150)},
-	{"name": "Central Avenue", "position": Vector3(0, 0, 60)}
+	{"name": "South Gardens", "position": Vector3(15, 0, 135)},
+	{"name": "Mirage Fuel East", "position": Vector3(138, 0, 150)},
+	{"name": "Central Avenue", "position": Vector3(15, 0, 45)}
 ]
 
 func _ready() -> void:
