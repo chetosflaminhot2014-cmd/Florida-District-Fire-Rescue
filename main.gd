@@ -743,9 +743,12 @@ func _create_world() -> void:
 	world_sun.shadow_enabled = graphics_quality >= 2 and not OS.has_feature("mobile")
 	game_world.add_child(world_sun)
 	_box("Ground", Vector3(440, 1, 440), Vector3(0, -0.55, 0), Color(0.19, 0.29, 0.19), true)
-	# Prefer the real Downtown Tampa street layout from OpenStreetMap.
-	# Keep the lightweight CC0 grid as a fallback if map data has not been generated yet.
-	var has_real_city_map := _create_osm_city_map()
+	# Prefer a prebuilt, imported Tampa GLB scene when the licensed asset is present.
+	# The model should be cropped to the playable area and exported at Godot's 1 unit = 1 metre scale.
+	# OSM geometry remains a development fallback, never presented as the final art asset.
+	var has_real_city_map := _create_prebuilt_tampa_model()
+	if not has_real_city_map:
+		has_real_city_map = _create_osm_city_map()
 	if not has_real_city_map:
 		_create_road_network_from_pack()
 	_create_fire_station()
@@ -2441,3 +2444,20 @@ func _toggle_pause_menu() -> void:
 	add_child(popup)
 	popup.popup_centered()
 	popup.confirmed.connect(func(): get_tree().paused = false; popup.queue_free())
+
+
+func _create_prebuilt_tampa_model() -> bool:
+	var model_path := "res://assets/florida_city/tampa_city.glb"
+	if not ResourceLoader.exists(model_path):
+		return false
+	var packed_model := load(model_path) as PackedScene
+	if packed_model == null:
+		push_warning("El modelo Tampa GLB existe, pero Godot no pudo importarlo como escena.")
+		return false
+	var model_instance := packed_model.instantiate()
+	model_instance.name = "PrebuiltTampaCityModel"
+	game_world.add_child(model_instance)
+	model_instance.position = Vector3.ZERO
+	model_instance.scale = Vector3.ONE
+	print("Mapa 3D prehecho de Tampa cargado desde: ", model_path)
+	return true
