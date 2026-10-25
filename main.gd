@@ -408,6 +408,51 @@ func _create_menu() -> void:
 		menu_panel.add_theme_constant_override("separation", 10)
 	_show_main_menu()
 
+func _clear_menu() -> void:
+	if not is_instance_valid(menu_panel):
+		return
+	for child in menu_panel.get_children():
+		menu_panel.remove_child(child)
+		child.queue_free()
+
+func _add_title() -> void:
+	if not is_instance_valid(menu_panel):
+		return
+	var title := Label.new()
+	title.text = "F.D.F.R.  /  EMERGENCY RESPONSE"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.add_theme_font_size_override("font_size", 20)
+	title.add_theme_color_override("font_color", Color(0.97, 0.96, 0.93))
+	menu_panel.add_child(title)
+
+func _add_button(button_text: String, action: Callable) -> void:
+	if not is_instance_valid(menu_panel):
+		return
+	var button := Button.new()
+	button.text = button_text
+	button.custom_minimum_size = Vector2(0, 48)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.focus_mode = Control.FOCUS_ALL
+	button.add_theme_font_size_override("font_size", 16)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.10, 0.12, 0.14)
+	style.border_color = Color(0.82, 0.12, 0.09)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(4)
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	button.add_theme_stylebox_override("normal", style)
+	var hover_style := style.duplicate() as StyleBoxFlat
+	hover_style.bg_color = Color(0.18, 0.08, 0.07)
+	button.add_theme_stylebox_override("hover", hover_style)
+	button.add_theme_color_override("font_color", Color(0.96, 0.96, 0.94))
+	button.add_theme_color_override("font_hover_color", Color(1.0, 0.78, 0.46))
+	button.pressed.connect(action)
+	menu_panel.add_child(button)
+
 func _show_main_menu() -> void:
 	_clear_menu()
 	_add_title()
