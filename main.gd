@@ -144,6 +144,8 @@ var world_environment: WorldEnvironment
 var rescue_victim: Node3D
 var rescue_victim_active := false
 var rescue_scene_reached := false
+var siren_player: AudioStreamPlayer3D
+var siren_enabled := false
 
 func _ready() -> void:
 	rng.randomize()
@@ -1192,6 +1194,7 @@ func _create_vehicle() -> void:
 	patrol_red_light = _add_person_box(vehicle, Vector3(0.42, 0.16, 0.28), Vector3(-0.45, 2.05, -0.05), Color(0.95, 0.025, 0.025))
 	_add_person_box(vehicle, Vector3(0.30, 0.16, 0.28), Vector3(0.0, 2.05, -0.05), Color(0.94, 0.94, 0.88))
 	patrol_blue_light = _add_person_box(vehicle, Vector3(0.42, 0.16, 0.28), Vector3(0.45, 2.05, -0.05), Color(0.025, 0.12, 0.98))
+	_create_siren_audio()
 
 
 func _create_service_vehicles() -> void:
@@ -1345,6 +1348,18 @@ func _on_mission_completed(reward: int, description: String) -> void:
 
 func _on_mission_failed(description: String) -> void:
 	dispatch_target_active = false
+	rescue_victim_active = false
+	rescue_scene_reached = false
+	if is_instance_valid(rescue_victim):
+		rescue_victim.queue_free()
+		rescue_victim = null
+	if fire_active:
+		fire_active = false
+		extinguishing = false
+		_set_water_stream_visible(false)
+		if is_instance_valid(fire_visual):
+			fire_visual.queue_free()
+			fire_visual = null
 	if is_instance_valid(dispatch_marker):
 		dispatch_marker.queue_free()
 		dispatch_marker = null
@@ -1403,7 +1418,7 @@ func _spawn_fire(location: Vector3) -> void:
 	fire_visual.name = "ActiveFire"
 	fire_visual.position = location
 	game_world.add_child(fire_visual)
-	var mobile_quality := OS.has_feature("mobile")
+	var mobile_quality := graphics_quality == 0 or OS.has_feature("mobile")
 	# Layered, emissive flame meshes keep a visible core even on low-end devices.
 	for i in range(7):
 		var flame := MeshInstance3D.new()
@@ -1660,6 +1675,7 @@ func _create_hud() -> void:
 	_touch_button("MANGUERA", Vector2(-164, -306), Vector2(148, 52), func(): _toggle_extinguishing(), Callable(), true)
 	_touch_button("REPOSTAR", Vector2(-164, -364), Vector2(148, 52), func(): _try_refuel(), Callable(), true)
 	_touch_button("CÁMARA", Vector2(-164, -422), Vector2(148, 52), func(): _toggle_vehicle_camera(), Callable(), true)
+	_touch_button("SIRENA", Vector2(-164, -480), Vector2(148, 52), func(): _toggle_siren(), Callable(), true)
 
 func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size: Vector2, on_down: Callable, on_up: Callable, right_side := false) -> void:
 	var b := Button.new()
@@ -1704,8 +1720,50 @@ func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size
 		b.pressed.connect(_interact_vehicle)
 	elif label_text == "CÁMARA":
 		b.pressed.connect(_toggle_vehicle_camera)
+	elif label_text == "SIRENA":
+		b.pressed.connect(_toggle_siren)
 	elif label_text == "LUCES":
 		b.pressed.connect(_toggle_emergency_lights)
+
+func _create_siren_audio() -> void:
+	# Generate a tiny looping two-tone siren in memory; no extra audio asset is required.
+	var sample_rate := 22050
+	var sample_count := sample_rate * 2
+	var pcm := PackedByteArray()
+	pcm.resize(sample_count * 2)
+	var phase := 0.0
+	for i in range(sample_count):
+		var t := float(i) / float(sample_count)
+		var sweep := 0.5 - 0.5 * cos(t * TAU)
+		var frequency := lerpf(620.0, 1040.0, sweep)
+		phase += TAU * frequency / float(sample_rate)
+		pcm.encode_s16(i * 2, int(sin(phase) * 14500.0))
+	var siren_stream := AudioStreamWAV.new()
+	siren_stream.format = AudioStreamWAV.FORMAT_16_BITS
+	siren_stream.mix_rate = sample_rate
+	siren_stream.stereo = false
+	siren_stream.data = pcm
+	siren_stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	siren_stream.loop_begin = 0
+	siren_stream.loop_end = sample_count
+	siren_player = AudioStreamPlayer3D.new()
+	siren_player.name = "EmergencySirenAudio"
+	siren_player.stream = siren_stream
+	siren_player.volume_db = -7.0
+	siren_player.unit_size = 12.0
+	siren_player.max_distance = 85.0
+	vehicle.add_child(siren_player)
+
+func _toggle_siren() -> void:
+	if not is_instance_valid(siren_player):
+		return
+	siren_enabled = not siren_enabled
+	if siren_enabled:
+		siren_player.play()
+	else:
+		siren_player.stop()
+	if is_instance_valid(status_label):
+		status_label.text = "SIRENA ACTIVADA" if siren_enabled else "SIRENA DESACTIVADA"
 
 func _toggle_vehicle_camera() -> void:
 	if not driving or not is_instance_valid(camera):
@@ -1735,7 +1793,10 @@ func _interact_vehicle() -> void:
 	if not game_active or not is_instance_valid(player) or not is_instance_valid(vehicle):
 		return
 	if rescue_victim_active and rescue_scene_reached and is_instance_valid(rescue_victim):
-		var responder_position := vehicle.global_position if driving else player.global_position
+		if driving:
+			if is_instance_valid(status_label): status_label.text = "BAJA DEL CAMIÓN PARA ATENDER A LA PERSONA"
+			return
+		var responder_position := player.global_position
 		if responder_position.distance_to(rescue_victim.global_position) <= 5.0:
 			rescue_victim_active = false
 			rescue_scene_reached = false
@@ -1858,7 +1919,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode == KEY_C and driving:
 			_toggle_vehicle_camera()
 		elif event.keycode == KEY_H:
-			_toggle_emergency_lights()
+			_toggle_siren()
 	if event is InputEventMouseButton and event.pressed and not OS.has_feature("mobile"):
 		if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
