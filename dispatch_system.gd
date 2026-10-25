@@ -28,7 +28,12 @@ var _calls := [
 	{"type": "Rescate por accidente de tránsito", "code": "RESCUE-1", "unit": "MOTOR 1 / RESCATE", "reward": 180, "priority": "PRIORIDAD ALTA", "fire": false},
 	{"type": "Persona atrapada y humo reportado", "code": "RESCUE-2", "unit": "MOTOR 1", "reward": 220, "priority": "PRIORIDAD CRÍTICA", "fire": false},
 	{"type": "Alarma de humo en edificio público", "code": "ALARM-1", "unit": "MOTOR 1", "reward": 120, "priority": "PRIORIDAD MEDIA", "fire": false},
-	{"type": "Incendio en almacén industrial", "code": "FIRE-4", "unit": "MOTOR 1 / ESCALERA", "reward": 350, "priority": "PRIORIDAD CRÍTICA", "fire": true}
+	{"type": "Incendio en almacén industrial", "code": "FIRE-4", "unit": "MOTOR 1 / ESCALERA", "reward": 350, "priority": "PRIORIDAD CRÍTICA", "fire": true},
+	{"type": "Incendio eléctrico en local", "code": "FIRE-5", "unit": "MOTOR 1", "reward": 280, "priority": "PRIORIDAD ALTA", "fire": true},
+	{"type": "Incendio de vegetación", "code": "FIRE-6", "unit": "MOTOR 1 / AGUA", "reward": 190, "priority": "PRIORIDAD MEDIA", "fire": true},
+	{"type": "Rescate de animal en vivienda", "code": "RESCUE-3", "unit": "MOTOR 1 / RESCATE", "reward": 160, "priority": "PRIORIDAD MEDIA", "fire": false},
+	{"type": "Falsa alarma de humo", "code": "ALARM-2", "unit": "MOTOR 1", "reward": 80, "priority": "PRIORIDAD BAJA", "fire": false},
+	{"type": "Rescate en edificio público", "code": "RESCUE-4", "unit": "MOTOR 1 / RESCATE", "reward": 240, "priority": "PRIORIDAD ALTA", "fire": false}
 ]
 var _locations := [
 	{"name": "Downtown", "position": Vector3(-30, 0, -30)},
@@ -71,7 +76,7 @@ func _build_panel() -> void:
 	_panel = PanelContainer.new()
 	_panel.anchor_left = 0.02
 	_panel.anchor_top = 0.12
-	_panel.anchor_right = 0.44
+	_panel.anchor_right = 0.48
 	_panel.anchor_bottom = 0.12
 	_panel.offset_bottom = 270
 	add_child(_panel)
@@ -133,8 +138,9 @@ func _accept_call() -> void:
 func _update_mission_display() -> void:
 	if not is_instance_valid(_call_label):
 		return
-	var minutes := int(ceil(_mission_time_left / 60.0))
-	var seconds := int(ceil(_mission_time_left)) % 60
+	var total_seconds := maxi(0, int(ceil(_mission_time_left)))
+	var minutes := int(total_seconds / 60)
+	var seconds := total_seconds % 60
 	_call_label.text = "LLAMADA ACTIVA · %s\nCódigo %s · Unidad %s\nTiempo restante: %02d:%02d\nObjetivo: llega al punto y completa la intervención." % [
 		_active_description, _active_code, _active_unit, minutes, seconds
 	]
