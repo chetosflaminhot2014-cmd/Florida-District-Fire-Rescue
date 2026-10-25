@@ -742,7 +742,7 @@ func _create_world() -> void:
 	world_sun.light_energy = 1.1
 	world_sun.shadow_enabled = graphics_quality >= 2 and not OS.has_feature("mobile")
 	game_world.add_child(world_sun)
-	_box("Ground", Vector3(440, 1, 440), Vector3(0, -0.55, 0), Color(0.19, 0.29, 0.19), true)
+	_box("Ground", Vector3(840, 1, 840), Vector3(0, -0.55, 0), Color(0.19, 0.29, 0.19), true)
 	# Prefer a prebuilt, imported Tampa GLB scene when the licensed asset is present.
 	# The model should be cropped to the playable area and exported at Godot's 1 unit = 1 metre scale.
 	# OSM geometry remains a development fallback, never presented as the final art asset.
@@ -944,7 +944,7 @@ func _create_osm_map_signage() -> void:
 	var credit := Label3D.new()
 	credit.name = "OpenStreetMapAttribution"
 	credit.text = "Map data © OpenStreetMap contributors"
-	credit.position = Vector3(0.0, 1.5, 207.0)
+	credit.position = Vector3(0.0, 1.5, 407.0)
 	credit.font_size = 20
 	credit.outline_size = 4
 	credit.modulate = Color(0.93, 0.95, 0.96)
@@ -960,15 +960,15 @@ func _create_road_network_from_pack() -> void:
 		_create_visible_road_surfaces()
 		return
 
-	var road_lines: Array[float] = [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]
+	var road_lines: Array[float] = [-360.0, -300.0, -240.0, -180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0, 240.0, 300.0, 360.0]
 	# Each intersection is a real GLB junction; straight road pieces fill the 60 m blocks.
 	for road_x in road_lines:
 		for road_z in road_lines:
 			_place_road_model("road-crossroad.glb", Vector3(road_x, 0.015, road_z))
-		for segment_z in range(-210, 211, 60):
+		for segment_z in range(-390, 391, 60):
 			_place_road_model("road-straight.glb", Vector3(road_x, 0.015, float(segment_z)), 0.0, Vector3(1.0, 1.0, 6.0))
 	for road_z in road_lines:
-		for segment_x in range(-210, 211, 60):
+		for segment_x in range(-390, 391, 60):
 			_place_road_model("road-straight.glb", Vector3(float(segment_x), 0.016, road_z), PI / 2.0, Vector3(1.0, 1.0, 6.0))
 
 	# Add small traffic details at major intersections without adding heavy collision meshes.
@@ -981,22 +981,22 @@ func _create_road_network_from_pack() -> void:
 
 
 func _create_visible_road_surfaces() -> void:
-	var road_lines: Array[float] = [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]
+	var road_lines: Array[float] = [-360.0, -300.0, -240.0, -180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0, 240.0, 300.0, 360.0]
 	var asphalt := Color(0.075, 0.085, 0.095)
 	var edge_paint := Color(0.88, 0.88, 0.80)
 	var center_paint := Color(0.96, 0.72, 0.12)
 	for road_x in road_lines:
-		_box("Visible_Asphalt_NS", Vector3(14.0, 0.12, 440.0), Vector3(road_x, 0.045, 0.0), asphalt, false)
-		_box("Road_Edge_NS_Left", Vector3(0.16, 0.025, 440.0), Vector3(road_x - 6.1, 0.115, 0.0), edge_paint, false)
-		_box("Road_Edge_NS_Right", Vector3(0.16, 0.025, 440.0), Vector3(road_x + 6.1, 0.115, 0.0), edge_paint, false)
-		_box("Road_Center_NS_Left", Vector3(0.12, 0.026, 440.0), Vector3(road_x - 0.16, 0.117, 0.0), center_paint, false)
-		_box("Road_Center_NS_Right", Vector3(0.12, 0.026, 440.0), Vector3(road_x + 0.16, 0.117, 0.0), center_paint, false)
+		_box("Visible_Asphalt_NS", Vector3(14.0, 0.12, 840.0), Vector3(road_x, 0.045, 0.0), asphalt, false)
+		_box("Road_Edge_NS_Left", Vector3(0.16, 0.025, 840.0), Vector3(road_x - 6.1, 0.115, 0.0), edge_paint, false)
+		_box("Road_Edge_NS_Right", Vector3(0.16, 0.025, 840.0), Vector3(road_x + 6.1, 0.115, 0.0), edge_paint, false)
+		_box("Road_Center_NS_Left", Vector3(0.12, 0.026, 840.0), Vector3(road_x - 0.16, 0.117, 0.0), center_paint, false)
+		_box("Road_Center_NS_Right", Vector3(0.12, 0.026, 840.0), Vector3(road_x + 0.16, 0.117, 0.0), center_paint, false)
 	for road_z in road_lines:
-		_box("Visible_Asphalt_EW", Vector3(440.0, 0.12, 14.0), Vector3(0.0, 0.046, road_z), asphalt, false)
-		_box("Road_Edge_EW_North", Vector3(440.0, 0.025, 0.16), Vector3(0.0, 0.116, road_z - 6.1), edge_paint, false)
-		_box("Road_Edge_EW_South", Vector3(440.0, 0.025, 0.16), Vector3(0.0, 0.116, road_z + 6.1), edge_paint, false)
-		_box("Road_Center_EW_Left", Vector3(440.0, 0.026, 0.12), Vector3(0.0, 0.118, road_z - 0.16), center_paint, false)
-		_box("Road_Center_EW_Right", Vector3(440.0, 0.026, 0.12), Vector3(0.0, 0.118, road_z + 0.16), center_paint, false)
+		_box("Visible_Asphalt_EW", Vector3(840.0, 0.12, 14.0), Vector3(0.0, 0.046, road_z), asphalt, false)
+		_box("Road_Edge_EW_North", Vector3(840.0, 0.025, 0.16), Vector3(0.0, 0.116, road_z - 6.1), edge_paint, false)
+		_box("Road_Edge_EW_South", Vector3(840.0, 0.025, 0.16), Vector3(0.0, 0.116, road_z + 6.1), edge_paint, false)
+		_box("Road_Center_EW_Left", Vector3(840.0, 0.026, 0.12), Vector3(0.0, 0.118, road_z - 0.16), center_paint, false)
+		_box("Road_Center_EW_Right", Vector3(840.0, 0.026, 0.12), Vector3(0.0, 0.118, road_z + 0.16), center_paint, false)
 
 
 func _place_road_model(model_file: String, world_position: Vector3, rotation_y: float = 0.0, model_scale: Vector3 = Vector3.ONE) -> void:
