@@ -109,13 +109,30 @@ def main():
                 height = 10.0
             if tags.get("building:levels", "").isdigit():
                 height = max(5.5, min(30.0, int(tags["building:levels"]) * 2.8))
+            footprint = [list(local_xy(lat, lon)) for lat, lon in ring]
             buildings.append({
                 "x": round(x, 2), "z": round(z, 2), "w": width, "d": depth,
                 "h": round(height, 2), "kind": tags.get("building", "yes"),
                 "levels": tags.get("building:levels", ""),
+                "footprint": footprint,
             })
-    # Keep the most useful road network and a bounded building count for Android.
-    roads.sort(key=lambda r: ({"motorway":0,"trunk":1,"primary":2,"secondary":3,"tertiary":4,"residential":5,"unclassified":6,"service":7,"living_street":8}.get(r["kind"], 9), -len(r["points"])))
+    # Keep a balanced mix of expressways, arterial roads, and local streets.
+    # Sorting all roads by class first would fill the limit with highways and erase
+    # the real neighborhood street pattern that makes Tampa recognizable.
+    road_quotas = {
+        "motorway": 45, "trunk": 45, "primary": 100, "secondary": 120,
+        "tertiary": 130, "residential": 180, "unclassified": 35,
+        "service": 35, "living_street": 10,
+    }
+    selected_roads = []
+    for kind, quota in road_quotas.items():
+        matching = [road for road in roads if road["kind"] == kind]
+        matching.sort(key=lambda road: len(road["points"]), reverse=True)
+        selected_roads.extend(matching[:quota])
+    selected_ids = {id(road) for road in selected_roads}
+    remaining = [road for road in roads if id(road) not in selected_ids]
+    remaining.sort(key=lambda road: len(road["points"]), reverse=True)
+    roads = selected_roads + remaining[:max(0, 700 - len(selected_roads))]
     roads = roads[:700]
     buildings.sort(key=lambda b: (b["kind"] not in ("hospital", "commercial", "apartments", "office"), -(b["w"] * b["d"])))
     buildings = buildings[:650]
