@@ -853,7 +853,7 @@ func _create_fire_station() -> void:
 			_box("BayDoorStripe", Vector3(4.2, 0.07, 0.04), Vector3(bay_x, 0.45 + float(stripe) * 0.62, 108.15), Color(0.68, 0.74, 0.77), false)
 	_box("StationSign", Vector3(12, 0.9, 0.22), Vector3(60, 5.35, 108.15), Color(0.62, 0.13, 0.1), false)
 	var station_label := Label3D.new()
-	station_label.text = "MIRAGE HILLS FIRE & RESCUE · STATION 1"
+	station_label.text = "F.D.F.R. · FLORIDA DISTRICT · STATION 01"
 	station_label.position = Vector3(60, 5.35, 108.0)
 	station_label.font_size = 28
 	station_label.outline_size = 5
@@ -973,7 +973,7 @@ func _create_city_blocks() -> void:
 			elif x == -165.0 and z == 75.0: civic_name = "PUBLIC LIBRARY"
 			var block_position := Vector3(x, 0, z)
 			var reserved_for_gas_station := false
-			for station_position in [Vector3(-150, 0, -150), Vector3(150, 0, -150), Vector3(-150, 0, 150), Vector3(150, 0, 150)]:
+			for station_position in [Vector3(-150, 0, 15), Vector3(150, 0, -150), Vector3(-150, 0, 150), Vector3(150, 0, 150)]:
 				if absf(x - station_position.x) < 24.0 and absf(z - station_position.z) < 24.0:
 					reserved_for_gas_station = true
 					break
@@ -991,7 +991,7 @@ func _create_gas_stations() -> void:
 	# Four separated stations, each placed in a reserved block beside the road grid.
 	gas_station_positions.clear()
 	var locations: Array[Dictionary] = [
-		{"name": "MIRAGE FUEL · DOWNTOWN", "position": Vector3(-150, 0, -150), "rotation": 0.0},
+		{"name": "MIRAGE FUEL · WEST", "position": Vector3(-150, 0, 15), "rotation": 0.0},
 		{"name": "MIRAGE FUEL · NORTH", "position": Vector3(150, 0, -150), "rotation": PI},
 		{"name": "MIRAGE FUEL · SOUTHWEST", "position": Vector3(-150, 0, 150), "rotation": PI / 2.0},
 		{"name": "MIRAGE FUEL · EAST", "position": Vector3(150, 0, 150), "rotation": -PI / 2.0}
