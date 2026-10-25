@@ -37,6 +37,13 @@ class MinimapControl extends Control:
 # No external assets are required; missing officer models are replaced by generated characters.
 
 const WORLD_LIMIT := 220.0
+# Earth2Road exports a complete Godot scene plus its dependent resources.
+# Place the exported scene and its resource folders under assets/earth2road/tampa/.
+const EARTH2ROAD_SCENE_CANDIDATES := [
+	"res://assets/earth2road/tampa/map.tscn",
+	"res://assets/earth2road/tampa/world.tscn",
+	"res://assets/earth2road/tampa/main.tscn"
+]
 const WALK_SPEED := 5.0
 const RUN_SPEED := 8.0
 const PATROL_MAX_FORWARD_SPEED := 27.0 # m/s; about 97 km/h
@@ -743,10 +750,11 @@ func _create_world() -> void:
 	world_sun.shadow_enabled = graphics_quality >= 2 and not OS.has_feature("mobile")
 	game_world.add_child(world_sun)
 	_box("Ground", Vector3(840, 1, 840), Vector3(0, -0.55, 0), Color(0.19, 0.29, 0.19), true)
-	# Prefer a prebuilt, imported Tampa GLB scene when the licensed asset is present.
-	# The model should be cropped to the playable area and exported at Godot's 1 unit = 1 metre scale.
-	# OSM geometry remains a development fallback, never presented as the final art asset.
-	var has_real_city_map := _create_prebuilt_tampa_model()
+	# Prefer the full Earth2Road-exported Godot scene, including its road network,
+	# junctions, sidewalks and generated city geometry. Keep the older imports as fallbacks.
+	var has_real_city_map := _create_earth2road_city_map()
+	if not has_real_city_map:
+		has_real_city_map = _create_prebuilt_tampa_model()
 	if not has_real_city_map:
 		has_real_city_map = _create_osm_city_map()
 	if not has_real_city_map:
@@ -2526,6 +2534,28 @@ func _toggle_pause_menu() -> void:
 	add_child(popup)
 	popup.popup_centered()
 	popup.confirmed.connect(func(): get_tree().paused = false; popup.queue_free())
+
+
+func _create_earth2road_city_map() -> bool:
+	for scene_path in EARTH2ROAD_SCENE_CANDIDATES:
+		if not ResourceLoader.exists(scene_path):
+			continue
+		var packed_map := load(scene_path) as PackedScene
+		if packed_map == null:
+			push_warning("La escena Earth2Road existe pero Godot no pudo cargarla: " + scene_path)
+			continue
+		var map_instance := packed_map.instantiate()
+		if not map_instance is Node3D:
+			push_warning("La escena Earth2Road debe tener un nodo raíz Node3D: " + scene_path)
+			map_instance.queue_free()
+			continue
+		map_instance.name = "Earth2Road_Tampa_City"
+		map_instance.position = Vector3.ZERO
+		map_instance.scale = Vector3.ONE
+		game_world.add_child(map_instance)
+		print("Mapa Earth2Road cargado: ", scene_path)
+		return true
+	return false
 
 
 func _create_prebuilt_tampa_model() -> bool:
