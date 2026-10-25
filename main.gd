@@ -190,14 +190,14 @@ func _create_startup_fallback() -> CanvasLayer:
 	column.add_theme_constant_override("separation", 14)
 	center.add_child(column)
 	var title := Label.new()
-	title.text = "FIRE DEPARTMENT SIMULATOR"
+	title.text = "F.D.F.R.\nFLORIDA DISTRICT FIRE & RESCUE"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title.add_theme_font_size_override("font_size", 23)
 	title.add_theme_color_override("font_color", Color(0.92, 0.96, 1.0))
 	column.add_child(title)
 	var message := Label.new()
-	message.text = "Iniciando Fire Department Simulator..."
+	message.text = "Iniciando F.D.F.R. — Florida District Fire & Rescue..."
 	message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	message.add_theme_color_override("font_color", Color(0.55, 0.75, 0.92))
@@ -252,13 +252,13 @@ func _create_menu() -> void:
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu_layer.add_child(background)
-	# Modern police-simulator landing screen: navigation on the left, operations panel on the right.
+	# F.D.F.R. brand screen: original Florida fire and rescue identity.
 	var upper_glow := ColorRect.new()
 	upper_glow.anchor_left = 0.42
 	upper_glow.anchor_right = 1.0
 	upper_glow.anchor_top = 0.0
 	upper_glow.anchor_bottom = 1.0
-	upper_glow.color = Color(0.025, 0.09, 0.16, 0.92)
+	upper_glow.color = Color(0.10, 0.025, 0.025, 0.94)
 	upper_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu_layer.add_child(upper_glow)
 	var accent := ColorRect.new()
@@ -266,7 +266,7 @@ func _create_menu() -> void:
 	accent.anchor_right = 0.442
 	accent.anchor_top = 0.0
 	accent.anchor_bottom = 1.0
-	accent.color = Color(0.12, 0.55, 0.9)
+	accent.color = Color(0.82, 0.12, 0.08)
 	accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu_layer.add_child(accent)
 	var right_panel := PanelContainer.new()
@@ -280,8 +280,8 @@ func _create_menu() -> void:
 	right_panel.offset_top = 0
 	right_panel.offset_bottom = 0
 	var card_style := StyleBoxFlat.new()
-	card_style.bg_color = Color(0.025, 0.055, 0.09, 0.9)
-	card_style.border_color = Color(0.12, 0.3, 0.45)
+	card_style.bg_color = Color(0.055, 0.035, 0.035, 0.94)
+	card_style.border_color = Color(0.72, 0.16, 0.10)
 	card_style.set_border_width_all(1)
 	card_style.set_corner_radius_all(12)
 	right_panel.add_theme_stylebox_override("panel", card_style)
@@ -290,7 +290,7 @@ func _create_menu() -> void:
 	info.add_theme_constant_override("separation", 16)
 	right_panel.add_child(info)
 	var status := Label.new()
-	status.text = "MIRAGE HILLS  /  FIRE & RESCUE"
+	status.text = "F.D.F.R.  /  FLORIDA DISTRICT FIRE & RESCUE"
 	status.add_theme_font_size_override("font_size", 13)
 	status.add_theme_color_override("font_color", Color(0.35, 0.72, 1.0))
 	info.add_child(status)
@@ -301,7 +301,7 @@ func _create_menu() -> void:
 	info.add_child(scene_title)
 	var divider := ColorRect.new()
 	divider.custom_minimum_size = Vector2(0, 2)
-	divider.color = Color(0.13, 0.49, 0.78)
+	divider.color = Color(0.88, 0.19, 0.10)
 	info.add_child(divider)
 	var description := Label.new()
 	description.text = "Answer emergency calls, drive the engine,\nand protect every district."
@@ -324,7 +324,7 @@ func _create_menu() -> void:
 	footer.anchor_right = 0.95
 	footer.anchor_top = 0.88
 	footer.anchor_bottom = 0.96
-	footer.text = "EARLY ACCESS  •  GODOT ENGINE  •  MIRAGE HILLS"
+	footer.text = "F.D.F.R.  •  FIRE & RESCUE  •  FLORIDA DISTRICT"
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	footer.add_theme_font_size_override("font_size", 10)
 	footer.add_theme_color_override("font_color", Color(0.38, 0.5, 0.62))
