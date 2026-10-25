@@ -146,6 +146,7 @@ var rescue_victim_active := false
 var rescue_scene_reached := false
 var siren_player: AudioStreamPlayer3D
 var siren_enabled := false
+var secondary_controls_open := false
 
 func _ready() -> void:
 	rng.randomize()
@@ -1629,56 +1630,83 @@ func _create_hud() -> void:
 	hud_layer = CanvasLayer.new()
 	hud_layer.name = "HUD"
 	add_child(hud_layer)
+
+	# HUD despejado para móvil: mapa pequeño arriba a la izquierda y solo
+	# tres acciones principales visibles. Las acciones secundarias van en MÁS.
 	var top := PanelContainer.new()
-	top.anchor_left = 0.02
+	top.name = "StatusBar"
+	top.anchor_left = 0.22
 	top.anchor_top = 0.02
-	top.anchor_right = 0.98
+	top.anchor_right = 0.78
 	top.anchor_bottom = 0.02
-	top.offset_bottom = 42
+	top.offset_bottom = 38
 	hud_layer.add_child(top)
 	status_label = Label.new()
-	status_label.text = "A PIE — WASD para moverte"
+	status_label.text = "BOMBEROS · EN SERVICIO"
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_label.add_theme_font_size_override("font_size", 12)
 	top.add_child(status_label)
+
 	minimap = MinimapControl.new()
 	minimap.name = "Minimapa"
-	minimap.custom_minimum_size = Vector2(210, 170)
-	minimap.anchor_left = 1.0
-	minimap.anchor_right = 1.0
-	minimap.anchor_top = 0.12
-	minimap.anchor_bottom = 0.12
-	minimap.offset_left = -226
-	minimap.offset_right = -16
-	minimap.offset_top = 104
-	minimap.offset_bottom = 274
+	minimap.custom_minimum_size = Vector2(142, 112)
+	minimap.anchor_left = 0.0
+	minimap.anchor_right = 0.0
+	minimap.anchor_top = 0.0
+	minimap.anchor_bottom = 0.0
+	minimap.offset_left = 12
+	minimap.offset_right = 154
+	minimap.offset_top = 54
+	minimap.offset_bottom = 166
 	minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud_layer.add_child(minimap)
+
 	var pause := Button.new()
-	pause.text = "PAUSA"
+	pause.name = "PauseButton"
+	pause.text = "Ⅱ"
 	pause.anchor_left = 1.0
 	pause.anchor_right = 1.0
-	pause.offset_left = -100
+	pause.offset_left = -54
 	pause.offset_right = -12
-	pause.offset_top = 56
-	pause.offset_bottom = 96
+	pause.offset_top = 12
+	pause.offset_bottom = 54
+	pause.add_theme_font_size_override("font_size", 22)
 	pause.pressed.connect(_toggle_pause_menu)
 	hud_layer.add_child(pause)
-	# Controles táctiles reorganizados: cruceta compacta a la izquierda y acciones grandes a la derecha.
-	_touch_button("▲", Vector2(78, -198), Vector2(60, 56), func(): touch_move.y = -1.0, func(): touch_move.y = 0.0)
-	_touch_button("▼", Vector2(78, -78), Vector2(60, 56), func(): touch_move.y = 1.0, func(): touch_move.y = 0.0)
-	_touch_button("◀", Vector2(14, -138), Vector2(60, 56), func(): touch_move.x = -1.0, func(): touch_move.x = 0.0)
-	_touch_button("▶", Vector2(142, -138), Vector2(60, 56), func(): touch_move.x = 1.0, func(): touch_move.x = 0.0)
-	_touch_button("USAR / BAJAR", Vector2(-164, -70), Vector2(148, 56), func(): pass, Callable(), true)
-	_touch_button("LUCES", Vector2(-164, -132), Vector2(148, 52), func(): pass, Callable(), true)
-	_touch_button("CORRER", Vector2(-164, -190), Vector2(148, 52), func(): touch_run = true, func(): touch_run = false, true)
-	_touch_button("FRENO", Vector2(-164, -248), Vector2(148, 52), func(): touch_brake = true, func(): touch_brake = false, true)
-	_touch_button("MANGUERA", Vector2(-164, -306), Vector2(148, 52), func(): _toggle_extinguishing(), Callable(), true)
-	_touch_button("REPOSTAR", Vector2(-164, -364), Vector2(148, 52), func(): _try_refuel(), Callable(), true)
-	_touch_button("CÁMARA", Vector2(-164, -422), Vector2(148, 52), func(): _toggle_vehicle_camera(), Callable(), true)
-	_touch_button("SIRENA", Vector2(-164, -480), Vector2(148, 52), func(): _toggle_siren(), Callable(), true)
+
+	# Cruceta compacta en la esquina inferior izquierda.
+	_touch_button("▲", Vector2(70, -154), Vector2(48, 46), func(): touch_move.y = -1.0, func(): touch_move.y = 0.0)
+	_touch_button("▼", Vector2(70, -54), Vector2(48, 46), func(): touch_move.y = 1.0, func(): touch_move.y = 0.0)
+	_touch_button("◀", Vector2(20, -104), Vector2(46, 46), func(): touch_move.x = -1.0, func(): touch_move.x = 0.0)
+	_touch_button("▶", Vector2(122, -104), Vector2(46, 46), func(): touch_move.x = 1.0, func(): touch_move.x = 0.0)
+
+	# Tres acciones principales en la esquina inferior derecha.
+	_touch_button("USAR", Vector2(-116, -58), Vector2(102, 48), func(): pass, Callable(), true)
+	_touch_button("MANGUERA", Vector2(-116, -112), Vector2(102, 48), func(): pass, Callable(), true)
+	_touch_button("SIRENA", Vector2(-116, -166), Vector2(102, 48), func(): pass, Callable(), true)
+
+	# Acciones poco frecuentes quedan ocultas hasta que el jugador las necesite.
+	_touch_button("MÁS  +", Vector2(-116, -220), Vector2(102, 44), func(): pass, Callable(), true)
+	_touch_button("LUCES", Vector2(-116, -270), Vector2(102, 42), func(): pass, Callable(), true)
+	_touch_button("CORRER", Vector2(-116, -318), Vector2(102, 42), func(): pass, Callable(), true)
+	_touch_button("FRENO", Vector2(-116, -366), Vector2(102, 42), func(): pass, Callable(), true)
+	_touch_button("REPOSTAR", Vector2(-116, -414), Vector2(102, 42), func(): pass, Callable(), true)
+	_touch_button("CÁMARA", Vector2(-116, -462), Vector2(102, 42), func(): pass, Callable(), true)
+	for control_name in ["LUCES", "CORRER", "FRENO", "REPOSTAR", "CÁMARA"]:
+		var secondary := hud_layer.find_child("Touch_" + control_name, true, false)
+		if is_instance_valid(secondary):
+			secondary.visible = false
+	var more_button := hud_layer.find_child("Touch_MÁS  +", true, false)
+	if is_instance_valid(more_button):
+		more_button.pressed.connect(_toggle_secondary_controls)
+	for control_name in ["LUCES", "CORRER", "FRENO", "REPOSTAR", "CÁMARA"]:
+		var secondary := hud_layer.find_child("Touch_" + control_name, true, false)
+		if is_instance_valid(secondary):
+			secondary.visible = false
 
 func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size: Vector2, on_down: Callable, on_up: Callable, right_side := false) -> void:
 	var b := Button.new()
+	b.name = "Touch_" + label_text
 	b.text = label_text
 	b.custom_minimum_size = button_size
 	if right_side:
@@ -1724,6 +1752,17 @@ func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size
 		b.pressed.connect(_toggle_siren)
 	elif label_text == "LUCES":
 		b.pressed.connect(_toggle_emergency_lights)
+
+func _toggle_secondary_controls() -> void:
+	secondary_controls_open = not secondary_controls_open
+	for control_name in ["LUCES", "CORRER", "FRENO", "REPOSTAR", "CÁMARA"]:
+		var secondary := hud_layer.find_child("Touch_" + control_name, true, false)
+		if is_instance_valid(secondary):
+			secondary.visible = secondary_controls_open
+	var more_button := hud_layer.find_child("Touch_MÁS  +", true, false)
+	if is_instance_valid(more_button):
+		more_button.text = "MENOS  −" if secondary_controls_open else "MÁS  +"
+
 
 func _create_siren_audio() -> void:
 	# Generate a tiny looping two-tone siren in memory; no extra audio asset is required.
