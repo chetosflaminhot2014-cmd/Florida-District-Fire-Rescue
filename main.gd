@@ -137,9 +137,17 @@ var water_drops: Array[MeshInstance3D] = []
 var gas_station_positions: Array[Vector3] = []
 var fuel_level := 100.0
 var refuel_notice_timer := 0.0
+var vehicle_cockpit_camera := false
+var graphics_quality := 2
+var world_sun: DirectionalLight3D
+var world_environment: WorldEnvironment
+var rescue_victim: Node3D
+var rescue_victim_active := false
+var rescue_scene_reached := false
 
 func _ready() -> void:
 	rng.randomize()
+	graphics_quality = 0 if OS.has_feature("mobile") else 2
 	# Draw a safe startup screen first. If the full menu encounters a runtime
 	# error, this overlay remains visible instead of leaving a blank grey screen.
 	var startup_fallback := _create_startup_fallback()
@@ -486,6 +494,18 @@ func _show_settings() -> void:
 	var sensitivity_label := Label.new()
 	sensitivity_label.text = "Sensibilidad de cámara"
 	menu_panel.add_child(sensitivity_label)
+	var quality_label := Label.new()
+	quality_label.text = "Calidad gráfica (Android: prioriza rendimiento)"
+	menu_panel.add_child(quality_label)
+	var quality_buttons := HBoxContainer.new()
+	quality_buttons.add_theme_constant_override("separation", 6)
+	menu_panel.add_child(quality_buttons)
+	for option in [{"label": "LIGERA", "value": 0}, {"label": "MEDIA", "value": 1}, {"label": "ALTA", "value": 2}]:
+		var quality_button := Button.new()
+		quality_button.text = str(option["label"])
+		quality_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		quality_button.pressed.connect(_set_graphics_quality.bind(int(option["value"])))
+		quality_buttons.add_child(quality_button)
 	var sensitivity := HSlider.new()
 	sensitivity.min_value = 0.001
 	sensitivity.max_value = 0.006
@@ -531,6 +551,7 @@ func _start_game(female: bool) -> void:
 
 func _create_world() -> void:
 	var env_node := WorldEnvironment.new()
+	world_environment = env_node
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color(0.47, 0.65, 0.82)
@@ -539,11 +560,11 @@ func _create_world() -> void:
 	env.ambient_light_energy = 0.85
 	env_node.environment = env
 	game_world.add_child(env_node)
-	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-48, -28, 0)
-	sun.light_energy = 1.1
-	sun.shadow_enabled = false
-	game_world.add_child(sun)
+	world_sun = DirectionalLight3D.new()
+	world_sun.rotation_degrees = Vector3(-48, -28, 0)
+	world_sun.light_energy = 1.1
+	world_sun.shadow_enabled = graphics_quality >= 2 and not OS.has_feature("mobile")
+	game_world.add_child(world_sun)
 	_box("Ground", Vector3(440, 1, 440), Vector3(0, -0.55, 0), Color(0.19, 0.29, 0.19), true)
 	# Real road pieces from the uploaded Kenney City Roads CC0 pack.
 	_create_road_network_from_pack()
@@ -554,6 +575,7 @@ func _create_world() -> void:
 	_create_street_furniture()
 	_create_crosswalks()
 	_create_district_markers()
+	_apply_graphics_quality()
 
 
 func _create_road_network_from_pack() -> void:
@@ -642,12 +664,42 @@ func _create_district_markers() -> void:
 		game_world.add_child(sign)
 
 func _create_fire_station() -> void:
-	_box("FireStation", Vector3(17, 6, 11), Vector3(60, 3, 115), Color(0.48, 0.12, 0.09), true)
-	_box("StationEntrance", Vector3(5, 3.3, 0.25), Vector3(60, 1.65, 109.35), Color(0.08, 0.13, 0.2), false)
-	_box("StationSign", Vector3(8, 0.8, 0.2), Vector3(60, 5.0, 109.15), Color(0.62, 0.13, 0.1), false)
-	_box("StationParking", Vector3(24, 0.08, 16), Vector3(60, 0.0, 101), Color(0.16, 0.17, 0.18), false)
-	for i in range(3):
-		_box("ParkingLine", Vector3(0.12, 0.025, 6), Vector3(52 + i * 7, 0.06, 101), Color(0.9, 0.9, 0.82), false)
+	# Station compound with marked engine bays and a dispatch board.
+	_box("FireStation", Vector3(21, 6.5, 13), Vector3(60, 3.25, 115), Color(0.42, 0.105, 0.08), true)
+	_box("StationRoofTrim", Vector3(21.5, 0.35, 13.5), Vector3(60, 6.55, 115), Color(0.13, 0.16, 0.19), false)
+	_box("StationEntrance", Vector3(5.2, 3.6, 0.25), Vector3(54.7, 1.8, 108.35), Color(0.08, 0.13, 0.2), false)
+	for bay_x in [58.0, 64.0]:
+		_box("EngineBayDoor", Vector3(4.8, 3.5, 0.22), Vector3(bay_x, 1.8, 108.3), Color(0.11, 0.19, 0.25), false)
+		for stripe in range(5):
+			_box("BayDoorStripe", Vector3(4.2, 0.07, 0.04), Vector3(bay_x, 0.45 + float(stripe) * 0.62, 108.15), Color(0.68, 0.74, 0.77), false)
+	_box("StationSign", Vector3(12, 0.9, 0.22), Vector3(60, 5.35, 108.15), Color(0.62, 0.13, 0.1), false)
+	var station_label := Label3D.new()
+	station_label.text = "MIRAGE HILLS FIRE & RESCUE · STATION 1"
+	station_label.position = Vector3(60, 5.35, 108.0)
+	station_label.font_size = 28
+	station_label.outline_size = 5
+	station_label.modulate = Color(1.0, 0.91, 0.78)
+	station_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	game_world.add_child(station_label)
+	_box("StationParking", Vector3(28, 0.08, 18), Vector3(60, 0.0, 99), Color(0.16, 0.17, 0.18), false)
+	for i in range(4):
+		_box("ParkingLine", Vector3(0.12, 0.025, 7), Vector3(48 + i * 7.5, 0.06, 99), Color(0.9, 0.9, 0.82), false)
+	_box("StationDispatchBoard", Vector3(4.2, 2.4, 0.12), Vector3(68.8, 2.2, 109.0), Color(0.025, 0.12, 0.16), false)
+	_box("StationDispatchScreen", Vector3(3.6, 1.7, 0.05), Vector3(68.8, 2.35, 108.9), Color(0.08, 0.48, 0.52), false)
+
+func _apply_graphics_quality() -> void:
+	if is_instance_valid(world_sun):
+		world_sun.shadow_enabled = graphics_quality >= 2 and not OS.has_feature("mobile")
+		world_sun.light_energy = 0.95 if graphics_quality == 0 else (1.05 if graphics_quality == 1 else 1.15)
+	if is_instance_valid(world_environment) and world_environment.environment != null:
+		world_environment.environment.ambient_light_energy = 0.95 if graphics_quality == 0 else 1.0
+
+func _set_graphics_quality(value: int) -> void:
+	graphics_quality = clampi(value, 0, 2)
+	_apply_graphics_quality()
+	if is_instance_valid(status_label):
+		var quality_name := "RENDIMIENTO" if graphics_quality == 0 else ("EQUILIBRADO" if graphics_quality == 1 else "CALIDAD PC")
+		status_label.text = "GRÁFICOS: " + quality_name
 
 func _create_city_blocks() -> void:
 	var colors: Array[Color] = [Color(0.48,0.48,0.46), Color(0.42,0.46,0.5), Color(0.56,0.48,0.39), Color(0.34,0.42,0.47), Color(0.55,0.56,0.53)]
@@ -1217,6 +1269,28 @@ func _create_dispatch_system() -> void:
 	dispatch_layer.mission_failed.connect(_on_mission_failed)
 
 func _on_dispatch_call_accepted(location: Vector3, description: String) -> void:
+	rescue_scene_reached = false
+	rescue_victim_active = false
+	if is_instance_valid(rescue_victim):
+		rescue_victim.queue_free()
+		rescue_victim = null
+	if description.to_lower().contains("rescate") or description.to_lower().contains("atrapada"):
+		rescue_victim = Node3D.new()
+		rescue_victim.name = "RescueVictim"
+		rescue_victim.position = location + Vector3(2.4, 0.0, 1.5)
+		game_world.add_child(rescue_victim)
+		rescue_victim_active = true
+		var body := _add_person_box(rescue_victim, Vector3(0.42, 0.8, 0.35), Vector3(0, 0.42, 0), Color(0.9, 0.55, 0.22))
+		body.rotation_degrees.z = 72
+		_add_person_box(rescue_victim, Vector3(0.32, 0.32, 0.32), Vector3(0, 0.9, 0), Color(0.82, 0.62, 0.46))
+		var rescue_marker := Label3D.new()
+		rescue_marker.text = "RESCATAR · ACÉRCATE Y PULSA E"
+		rescue_marker.position = Vector3(0, 2.0, 0)
+		rescue_marker.font_size = 28
+		rescue_marker.outline_size = 5
+		rescue_marker.modulate = Color(1.0, 0.72, 0.22)
+		rescue_marker.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		rescue_victim.add_child(rescue_marker)
 	dispatch_target_position = location
 	dispatch_target_active = true
 	if description.to_lower().contains("incendio") or description.to_lower().contains("fuego"):
@@ -1250,6 +1324,10 @@ func _update_dispatch_arrival() -> void:
 		return
 	var responder_position := vehicle.global_position if driving and is_instance_valid(vehicle) else (player.global_position if is_instance_valid(player) else Vector3.ZERO)
 	if responder_position.distance_to(dispatch_target_position) > 11.0:
+		return
+	if rescue_victim_active:
+		rescue_scene_reached = true
+		if is_instance_valid(status_label): status_label.text = "RESCATE EN CURSO · ACÉRCATE A LA PERSONA Y PULSA E"
 		return
 	dispatch_target_active = false
 	if is_instance_valid(dispatch_marker):
@@ -1581,6 +1659,7 @@ func _create_hud() -> void:
 	_touch_button("FRENO", Vector2(-164, -248), Vector2(148, 52), func(): touch_brake = true, func(): touch_brake = false, true)
 	_touch_button("MANGUERA", Vector2(-164, -306), Vector2(148, 52), func(): _toggle_extinguishing(), Callable(), true)
 	_touch_button("REPOSTAR", Vector2(-164, -364), Vector2(148, 52), func(): _try_refuel(), Callable(), true)
+	_touch_button("CÁMARA", Vector2(-164, -422), Vector2(148, 52), func(): _toggle_vehicle_camera(), Callable(), true)
 
 func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size: Vector2, on_down: Callable, on_up: Callable, right_side := false) -> void:
 	var b := Button.new()
@@ -1623,8 +1702,25 @@ func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size
 		b.button_up.connect(on_up)
 	if label_text == "USAR / BAJAR":
 		b.pressed.connect(_interact_vehicle)
+	elif label_text == "CÁMARA":
+		b.pressed.connect(_toggle_vehicle_camera)
 	elif label_text == "LUCES":
 		b.pressed.connect(_toggle_emergency_lights)
+
+func _toggle_vehicle_camera() -> void:
+	if not driving or not is_instance_valid(camera):
+		if is_instance_valid(status_label):
+			status_label.text = "SUBE AL CAMIÓN PARA CAMBIAR LA CÁMARA"
+		return
+	vehicle_cockpit_camera = not vehicle_cockpit_camera
+	if vehicle_cockpit_camera:
+		camera.position = Vector3(0, 2.25, -0.85)
+		camera.rotation_degrees = Vector3(-2, 0, 0)
+		if is_instance_valid(status_label): status_label.text = "CÁMARA INTERIOR · C para cambiar"
+	else:
+		camera.position = Vector3(0, 2.0, 7.0)
+		camera.rotation_degrees = Vector3(-10, 0, 0)
+		if is_instance_valid(status_label): status_label.text = "CÁMARA EXTERIOR · C para cambiar"
 
 func _toggle_emergency_lights() -> void:
 	emergency_lights_enabled = not emergency_lights_enabled
@@ -1638,6 +1734,19 @@ func _toggle_emergency_lights() -> void:
 func _interact_vehicle() -> void:
 	if not game_active or not is_instance_valid(player) or not is_instance_valid(vehicle):
 		return
+	if rescue_victim_active and rescue_scene_reached and is_instance_valid(rescue_victim):
+		var responder_position := vehicle.global_position if driving else player.global_position
+		if responder_position.distance_to(rescue_victim.global_position) <= 5.0:
+			rescue_victim_active = false
+			rescue_scene_reached = false
+			rescue_victim.queue_free()
+			rescue_victim = null
+			dispatch_target_active = false
+			if is_instance_valid(dispatch_marker): dispatch_marker.queue_free(); dispatch_marker = null
+			if is_instance_valid(minimap): minimap.target_active = false; minimap.queue_redraw()
+			if is_instance_valid(dispatch_layer): dispatch_layer.call("complete_arrival_mission")
+			if is_instance_valid(status_label): status_label.text = "RESCATE COMPLETADO · PERSONA ASEGURADA"
+			return
 	if driving:
 		driving = false
 		vehicle_speed = 0.0
@@ -1647,6 +1756,7 @@ func _interact_vehicle() -> void:
 		camera_pivot.reparent(player)
 		camera_pivot.position = Vector3(0,1.55,0)
 		camera_pivot.rotation = Vector3.ZERO
+		vehicle_cockpit_camera = false
 		camera.position = Vector3(0,1.0,5.5)
 	else:
 		if player.global_position.distance_to(vehicle.global_position) <= 5.0:
@@ -1655,6 +1765,7 @@ func _interact_vehicle() -> void:
 			camera_pivot.reparent(vehicle)
 			camera_pivot.position = Vector3(0,2.0,0)
 			camera_pivot.rotation = Vector3.ZERO
+			vehicle_cockpit_camera = false
 			camera.position = Vector3(0,2.0,7.0)
 		else:
 			status_label.text = "Acércate al camión de bomberos para subir"
@@ -1744,6 +1855,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_toggle_extinguishing()
 		elif event.keycode == KEY_G:
 			_try_refuel()
+		elif event.keycode == KEY_C and driving:
+			_toggle_vehicle_camera()
+		elif event.keycode == KEY_H:
+			_toggle_emergency_lights()
 	if event is InputEventMouseButton and event.pressed and not OS.has_feature("mobile"):
 		if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
