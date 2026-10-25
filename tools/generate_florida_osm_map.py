@@ -13,9 +13,10 @@ import time
 import urllib.parse
 import urllib.request
 
-# Downtown Tampa and the adjacent waterfront. A small local area keeps mobile
-# performance manageable; the airport and emergency facilities remain gameplay landmarks.
-SOUTH, WEST, NORTH, EAST = 27.9360, -82.4770, 27.9650, -82.4390
+# Downtown Tampa, Florida. Keep the geographic bounds close to the playable
+# world size so real OSM road spacing and building footprints are not crushed
+# into a tiny area. The 410 m square is a drivable downtown district for mobile.
+SOUTH, WEST, NORTH, EAST = 27.9487, -82.4604, 27.9523, -82.4562
 CENTER_LAT = (SOUTH + NORTH) / 2.0
 CENTER_LON = (WEST + EAST) / 2.0
 WORLD_SPAN = 410.0
@@ -101,9 +102,10 @@ def main():
             x, z = (min_x + max_x) / 2.0, (min_z + max_z) / 2.0
             if abs(x) > WORLD_LIMIT or abs(z) > WORLD_LIMIT:
                 continue
-            # Building models are intentionally scaled to readable gameplay size.
-            width = round(max(5.0, min(17.0, raw_w)), 2)
-            depth = round(max(5.0, min(17.0, raw_d)), 2)
+            # Preserve real-world footprint dimensions; only clamp tiny/oversized
+            # OSM polygons to keep imported game geometry usable.
+            width = round(max(4.0, min(22.0, raw_w)), 2)
+            depth = round(max(4.0, min(22.0, raw_d)), 2)
             height = 5.5
             if tags.get("building") in ("apartments", "commercial", "office", "hotel", "hospital"):
                 height = 10.0
@@ -139,7 +141,7 @@ def main():
     result = {
         "source": "OpenStreetMap contributors",
         "license": "ODbL-1.0",
-        "area": "Downtown Tampa, Florida, USA",
+        "area": "Downtown Tampa, Florida, USA (approx. 410 m playable district)",
         "bounds": {"south": SOUTH, "west": WEST, "north": NORTH, "east": EAST},
         "world_span": WORLD_SPAN,
         "roads": roads,
