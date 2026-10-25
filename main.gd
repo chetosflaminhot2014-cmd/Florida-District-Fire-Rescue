@@ -1096,7 +1096,7 @@ func _create_vehicle() -> void:
 	shape_node.position.y = 1.1
 	vehicle.add_child(shape_node)
 
-	var patrol_scene := load("res://assets/vehicles/firetruck.glb") as PackedScene
+	var patrol_scene := load("res://fire_truck.glb") as PackedScene
 	if patrol_scene != null:
 		var patrol_visual := patrol_scene.instantiate()
 		patrol_visual.name = "FireEngineModel"
@@ -1105,7 +1105,7 @@ func _create_vehicle() -> void:
 		vehicle.add_child(patrol_visual)
 		_fit_imported_model(patrol_visual, Vector3(2.6, 2.5, 5.5))
 	else:
-		push_error("No se pudo cargar res://assets/vehicles/firetruck.glb")
+		push_error("No se pudo cargar res://fire_truck.glb")
 
 	# Luces de emergencia funcionales sobre el techo, independientes del modelo.
 	patrol_red_light = _add_person_box(vehicle, Vector3(0.32, 0.13, 0.22), Vector3(-0.34, 1.52, -0.05), Color(0.95, 0.025, 0.025))
