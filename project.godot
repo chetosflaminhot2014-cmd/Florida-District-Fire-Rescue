@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="Fire Department Simulator"
+config/name="F.D.F.R.: Florida District Fire & Rescue"
 run/main_scene="uid://boj5fvl4kghed"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
