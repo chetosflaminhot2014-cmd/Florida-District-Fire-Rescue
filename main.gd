@@ -126,6 +126,7 @@ var fire_location := Vector3.ZERO
 var extinguishing := false
 var fire_visual: Node3D
 var fire_glow: OmniLight3D
+var water_drops: Array[MeshInstance3D] = []
 var gas_station_positions: Array[Vector3] = []
 var fuel_level := 100.0
 var refuel_notice_timer := 0.0
@@ -1237,8 +1238,36 @@ func _toggle_extinguishing() -> void:
 	if not game_active:
 		return
 	extinguishing = not extinguishing
+	if not extinguishing:
+		_set_water_stream_visible(false)
 	if is_instance_valid(status_label):
-		status_label.text = "MANGUERA ABIERTA: acércate al foco" if extinguishing else "MANGUERA CERRADA"
+		status_label.text = "MANGUERA ABIERTA: apunta y acércate al foco" if extinguishing else "MANGUERA CERRADA"
+
+func _ensure_water_stream() -> void:
+	if not water_drops.is_empty() or not is_instance_valid(game_world):
+		return
+	var water_material := StandardMaterial3D.new()
+	water_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	water_material.albedo_color = Color(0.18, 0.78, 1.0, 0.88)
+	water_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	water_material.emission_enabled = true
+	water_material.emission = Color(0.08, 0.48, 1.0)
+	for i in range(9):
+		var drop := MeshInstance3D.new()
+		drop.name = "WaterJet_%02d" % i
+		var sphere := SphereMesh.new()
+		sphere.radius = 0.10 if i % 3 == 0 else 0.065
+		sphere.height = sphere.radius * 2.0
+		drop.mesh = sphere
+		drop.material_override = water_material
+		drop.visible = false
+		game_world.add_child(drop)
+		water_drops.append(drop)
+
+func _set_water_stream_visible(value: bool) -> void:
+	for drop in water_drops:
+		if is_instance_valid(drop):
+			drop.visible = value
 
 func _spawn_fire(location: Vector3) -> void:
 	if is_instance_valid(fire_visual):
@@ -1275,10 +1304,24 @@ func _spawn_fire(location: Vector3) -> void:
 
 func _update_fire_response(delta: float) -> void:
 	if not fire_active:
+		_set_water_stream_visible(false)
 		return
 	var responder_position := vehicle.global_position if driving and is_instance_valid(vehicle) else (player.global_position if is_instance_valid(player) else Vector3.ZERO)
+	var nozzle_position := responder_position + Vector3(0, 1.25, 0)
+	var fire_target := fire_location + Vector3(0, 1.1, 0)
 	var distance := responder_position.distance_to(fire_location)
-	if extinguishing and distance <= 16.0:
+	var water_reaching_fire := extinguishing and distance <= 16.0
+	if water_reaching_fire:
+		_ensure_water_stream()
+		_set_water_stream_visible(true)
+		for i in range(water_drops.size()):
+			var t := fposmod(float(i) / float(water_drops.size()) + light_timer * 1.8, 1.0)
+			var drop_position := nozzle_position.lerp(fire_target, t)
+			drop_position.y += sin(t * PI) * 0.35
+			water_drops[i].global_position = drop_position
+	else:
+		_set_water_stream_visible(false)
+	if water_reaching_fire:
 		fire_strength = maxf(0.0, fire_strength - delta * 18.0)
 		if is_instance_valid(fire_glow):
 			fire_glow.light_energy = 2.2 * fire_strength / 100.0
