@@ -249,22 +249,22 @@ func _create_menu() -> void:
 	menu_layer.layer = 5
 	add_child(menu_layer)
 
-	# Cinematic F.D.F.R. front end: bold department branding, a clean command
-	# panel and a responsive single-column layout on phones.
+	# F.D.F.R. cinematic command screen: restrained emergency-red accents,
+	# clear action hierarchy, and a compact layout for portrait mobile screens.
 	var background := ColorRect.new()
 	background.name = "MenuBackground"
-	background.color = Color(0.035, 0.045, 0.055)
+	background.color = Color(0.018, 0.026, 0.038)
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu_layer.add_child(background)
 
 	var scene_tint := ColorRect.new()
 	scene_tint.name = "SceneTint"
-	scene_tint.anchor_left = 0.36
+	scene_tint.anchor_left = 0.34
 	scene_tint.anchor_right = 1.0
 	scene_tint.anchor_top = 0.0
 	scene_tint.anchor_bottom = 1.0
-	scene_tint.color = Color(0.11, 0.035, 0.035, 0.92)
+	scene_tint.color = Color(0.075, 0.025, 0.025, 0.92)
 	scene_tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu_layer.add_child(scene_tint)
 
@@ -274,112 +274,133 @@ func _create_menu() -> void:
 	top_rule.anchor_top = 0.0
 	top_rule.anchor_bottom = 0.0
 	top_rule.offset_bottom = 5
-	top_rule.color = Color(0.82, 0.12, 0.09)
+	top_rule.color = Color(0.88, 0.13, 0.09)
 	top_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu_layer.add_child(top_rule)
 
 	var brand := VBoxContainer.new()
 	brand.name = "BrandHeader"
 	brand.anchor_left = 0.055
-	brand.anchor_right = 0.43
-	brand.anchor_top = 0.08
-	brand.anchor_bottom = 0.28
-	brand.add_theme_constant_override("separation", 2)
+	brand.anchor_right = 0.44
+	brand.anchor_top = 0.075
+	brand.anchor_bottom = 0.29
+	brand.add_theme_constant_override("separation", 3)
 	menu_layer.add_child(brand)
 
 	var eyebrow := Label.new()
-	eyebrow.text = "FLORIDA DISTRICT  /  EMERGENCY SERVICES"
+	eyebrow.text = "FLORIDA DISTRICT  /  SERVICIO DE EMERGENCIAS"
+	eyebrow.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	eyebrow.add_theme_font_size_override("font_size", 12)
-	eyebrow.add_theme_color_override("font_color", Color(0.93, 0.67, 0.37))
+	eyebrow.add_theme_color_override("font_color", Color(1.0, 0.70, 0.39))
 	brand.add_child(eyebrow)
 
 	var brand_title := Label.new()
 	brand_title.text = "F.D.F.R."
-	brand_title.add_theme_font_size_override("font_size", 48)
-	brand_title.add_theme_color_override("font_color", Color(0.97, 0.96, 0.93))
+	brand_title.add_theme_font_size_override("font_size", 52)
+	brand_title.add_theme_color_override("font_color", Color(0.98, 0.97, 0.94))
 	brand.add_child(brand_title)
 
 	var brand_subtitle := Label.new()
-	brand_subtitle.text = "FIRE & RESCUE"
-	brand_subtitle.add_theme_font_size_override("font_size", 19)
-	brand_subtitle.add_theme_color_override("font_color", Color(0.90, 0.20, 0.14))
+	brand_subtitle.text = "FLORIDA DISTRICT FIRE & RESCUE"
+	brand_subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	brand_subtitle.add_theme_font_size_override("font_size", 14)
+	brand_subtitle.add_theme_color_override("font_color", Color(0.96, 0.27, 0.20))
 	brand.add_child(brand_subtitle)
+
+	var brand_rule := ColorRect.new()
+	brand_rule.custom_minimum_size = Vector2(84, 3)
+	brand_rule.color = Color(0.88, 0.13, 0.09)
+	brand.add_child(brand_rule)
 
 	var right_panel := PanelContainer.new()
 	right_panel.name = "OperationsPanel"
-	right_panel.anchor_left = 0.52
-	right_panel.anchor_right = 0.94
-	right_panel.anchor_top = 0.12
-	right_panel.anchor_bottom = 0.84
+	right_panel.anchor_left = 0.53
+	right_panel.anchor_right = 0.945
+	right_panel.anchor_top = 0.115
+	right_panel.anchor_bottom = 0.85
 	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.035, 0.045, 0.055, 0.93)
-	panel_style.border_color = Color(0.36, 0.12, 0.10, 0.95)
+	panel_style.bg_color = Color(0.025, 0.034, 0.047, 0.96)
+	panel_style.border_color = Color(0.32, 0.12, 0.11, 0.95)
 	panel_style.set_border_width_all(1)
-	panel_style.set_corner_radius_all(5)
-	panel_style.content_margin_left = 24
-	panel_style.content_margin_right = 24
-	panel_style.content_margin_top = 24
-	panel_style.content_margin_bottom = 24
+	panel_style.set_corner_radius_all(7)
+	panel_style.content_margin_left = 26
+	panel_style.content_margin_right = 26
+	panel_style.content_margin_top = 26
+	panel_style.content_margin_bottom = 26
 	right_panel.add_theme_stylebox_override("panel", panel_style)
 	menu_layer.add_child(right_panel)
 
 	var info := VBoxContainer.new()
-	info.add_theme_constant_override("separation", 12)
+	info.add_theme_constant_override("separation", 13)
 	right_panel.add_child(info)
 
 	var status := Label.new()
-	status.text = "DEPARTMENT BRIEFING"
+	status.text = "CENTRO DE OPERACIONES  /  F.D.F.R."
 	status.add_theme_font_size_override("font_size", 12)
-	status.add_theme_color_override("font_color", Color(0.93, 0.67, 0.37))
+	status.add_theme_color_override("font_color", Color(1.0, 0.70, 0.39))
 	info.add_child(status)
 
 	var scene_title := Label.new()
-	scene_title.text = "WHEN THE CALL\nCOMES IN."
-	scene_title.add_theme_font_size_override("font_size", 34)
-	scene_title.add_theme_color_override("font_color", Color(0.97, 0.96, 0.93))
+	scene_title.text = "CUANDO LLEGA\nLA LLAMADA."
+	scene_title.add_theme_font_size_override("font_size", 36)
+	scene_title.add_theme_color_override("font_color", Color(0.98, 0.97, 0.94))
 	info.add_child(scene_title)
 
 	var divider := ColorRect.new()
 	divider.custom_minimum_size = Vector2(0, 3)
-	divider.color = Color(0.82, 0.12, 0.09)
+	divider.color = Color(0.88, 0.13, 0.09)
 	info.add_child(divider)
 
 	var description := Label.new()
-	description.text = "Respond across the district. Protect the public. Bring every crew home."
+	description.text = "Responde en todo el distrito. Protege a la comunidad. Regresa con tu equipo."
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description.add_theme_font_size_override("font_size", 16)
-	description.add_theme_color_override("font_color", Color(0.76, 0.78, 0.79))
+	description.add_theme_color_override("font_color", Color(0.76, 0.80, 0.84))
 	info.add_child(description)
 
 	var spacer := Control.new()
-	spacer.custom_minimum_size.y = 12
+	spacer.custom_minimum_size.y = 10
 	info.add_child(spacer)
 
-	for feature in ["01   FIRE SUPPRESSION", "02   TECHNICAL RESCUE", "03   EMERGENCY RESPONSE"]:
+	for feature in ["01   EXTINCIÓN DE INCENDIOS", "02   RESCATE TÉCNICO", "03   RESPUESTA A EMERGENCIAS"]:
+		var feature_row := HBoxContainer.new()
+		feature_row.add_theme_constant_override("separation", 10)
+		var marker := ColorRect.new()
+		marker.custom_minimum_size = Vector2(3, 20)
+		marker.color = Color(0.88, 0.13, 0.09)
+		feature_row.add_child(marker)
 		var feature_label := Label.new()
 		feature_label.text = feature
-		feature_label.add_theme_font_size_override("font_size", 13)
-		feature_label.add_theme_color_override("font_color", Color(0.88, 0.89, 0.87))
-		info.add_child(feature_label)
+		feature_label.add_theme_font_size_override("font_size", 12)
+		feature_label.add_theme_color_override("font_color", Color(0.88, 0.90, 0.92))
+		feature_row.add_child(feature_label)
+		info.add_child(feature_row)
+
+	var briefing_note := Label.new()
+	briefing_note.text = "UN JUGADOR  •  CIUDAD ABIERTA  •  MISIONES DINÁMICAS"
+	briefing_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	briefing_note.add_theme_font_size_override("font_size", 10)
+	briefing_note.add_theme_color_override("font_color", Color(0.65, 0.70, 0.75))
+	info.add_child(briefing_note)
 
 	var footer := Label.new()
 	footer.name = "MenuFooter"
-	footer.anchor_left = 0.52
-	footer.anchor_right = 0.94
+	footer.anchor_left = 0.53
+	footer.anchor_right = 0.945
 	footer.anchor_top = 0.89
 	footer.anchor_bottom = 0.95
 	footer.text = "F.D.F.R.  /  FLORIDA DISTRICT FIRE & RESCUE"
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	footer.add_theme_font_size_override("font_size", 10)
-	footer.add_theme_color_override("font_color", Color(0.62, 0.63, 0.62))
+	footer.add_theme_color_override("font_color", Color(0.62, 0.66, 0.70))
 	menu_layer.add_child(footer)
 
 	var left_area := Control.new()
 	left_area.name = "MenuNavigation"
 	left_area.anchor_left = 0.055
-	left_area.anchor_right = 0.43
-	left_area.anchor_top = 0.32
-	left_area.anchor_bottom = 0.88
+	left_area.anchor_right = 0.44
+	left_area.anchor_top = 0.34
+	left_area.anchor_bottom = 0.89
 	menu_layer.add_child(left_area)
 
 	var left_center := CenterContainer.new()
@@ -388,23 +409,24 @@ func _create_menu() -> void:
 
 	menu_panel = VBoxContainer.new()
 	menu_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	menu_panel.add_theme_constant_override("separation", 12)
+	menu_panel.add_theme_constant_override("separation", 11)
 	left_center.add_child(menu_panel)
 
-	# Compact portrait layout on mobile; keep all important actions visible.
+	# Keep the logo, actions and touch targets readable on a phone.
 	if OS.has_feature("mobile") or get_viewport().get_visible_rect().size.x < 760:
 		scene_tint.visible = false
 		right_panel.visible = false
 		footer.visible = false
 		brand.anchor_left = 0.07
 		brand.anchor_right = 0.93
-		brand.anchor_top = 0.06
+		brand.anchor_top = 0.055
 		brand.anchor_bottom = 0.27
-		brand_title.add_theme_font_size_override("font_size", 40)
+		brand_title.add_theme_font_size_override("font_size", 43)
+		brand_subtitle.add_theme_font_size_override("font_size", 12)
 		left_area.anchor_left = 0.07
 		left_area.anchor_right = 0.93
 		left_area.anchor_top = 0.31
-		left_area.anchor_bottom = 0.92
+		left_area.anchor_bottom = 0.94
 		menu_panel.add_theme_constant_override("separation", 10)
 	_show_main_menu()
 
@@ -426,38 +448,63 @@ func _add_title() -> void:
 	title.add_theme_color_override("font_color", Color(0.97, 0.96, 0.93))
 	menu_panel.add_child(title)
 
-func _add_button(button_text: String, action: Callable) -> void:
+func _add_button(button_text: String, action: Callable, primary: bool = false) -> void:
 	if not is_instance_valid(menu_panel):
 		return
 	var button := Button.new()
 	button.text = button_text
-	button.custom_minimum_size = Vector2(0, 48)
+	button.custom_minimum_size = Vector2(0, 52 if primary else 47)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.focus_mode = Control.FOCUS_ALL
-	button.add_theme_font_size_override("font_size", 16)
+	button.add_theme_font_size_override("font_size", 16 if primary else 14)
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.10, 0.12, 0.14)
-	style.border_color = Color(0.82, 0.12, 0.09)
+	style.bg_color = Color(0.76, 0.105, 0.075) if primary else Color(0.075, 0.09, 0.11)
+	style.border_color = Color(0.96, 0.29, 0.20) if primary else Color(0.25, 0.29, 0.33)
 	style.set_border_width_all(1)
-	style.set_corner_radius_all(4)
-	style.content_margin_left = 12
-	style.content_margin_right = 12
-	style.content_margin_top = 8
-	style.content_margin_bottom = 8
+	style.set_corner_radius_all(5)
+	style.content_margin_left = 15
+	style.content_margin_right = 15
+	style.content_margin_top = 9
+	style.content_margin_bottom = 9
 	button.add_theme_stylebox_override("normal", style)
 	var hover_style := style.duplicate() as StyleBoxFlat
-	hover_style.bg_color = Color(0.18, 0.08, 0.07)
+	hover_style.bg_color = Color(0.91, 0.16, 0.11) if primary else Color(0.13, 0.16, 0.19)
 	button.add_theme_stylebox_override("hover", hover_style)
-	button.add_theme_color_override("font_color", Color(0.96, 0.96, 0.94))
-	button.add_theme_color_override("font_hover_color", Color(1.0, 0.78, 0.46))
+	var pressed_style := style.duplicate() as StyleBoxFlat
+	pressed_style.bg_color = Color(0.55, 0.07, 0.05) if primary else Color(0.045, 0.055, 0.065)
+	button.add_theme_stylebox_override("pressed", pressed_style)
+	button.add_theme_color_override("font_color", Color(1.0, 0.98, 0.95))
+	button.add_theme_color_override("font_hover_color", Color(1.0, 0.83, 0.62))
 	button.pressed.connect(action)
+	menu_panel.add_child(button)
+
+func _add_coming_soon_button(button_text: String) -> void:
+	if not is_instance_valid(menu_panel):
+		return
+	var button := Button.new()
+	button.text = button_text
+	button.custom_minimum_size = Vector2(0, 47)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.disabled = true
+	button.tooltip_text = "El modo multijugador se añadirá después de completar la experiencia para un jugador."
+	button.add_theme_font_size_override("font_size", 13)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.045, 0.055, 0.065)
+	style.border_color = Color(0.16, 0.19, 0.22)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(5)
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	button.add_theme_stylebox_override("normal", style)
+	button.add_theme_color_override("font_color", Color(0.48, 0.52, 0.56))
+	button.add_theme_color_override("font_disabled_color", Color(0.48, 0.52, 0.56))
 	menu_panel.add_child(button)
 
 func _show_main_menu() -> void:
 	_clear_menu()
 	_add_title()
-	_add_button("JUGAR", _show_character_selection)
-	_add_button("MULTIJUGADOR", _show_multiplayer_menu)
+	_add_button("INICIAR SERVICIO", _show_character_selection, true)
+	_add_coming_soon_button("MULTIJUGADOR  ·  PRÓXIMAMENTE")
 	_add_button("CONFIGURACIÓN", _show_settings)
 	_add_button("CRÉDITOS", _show_credits)
 
