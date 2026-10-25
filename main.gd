@@ -246,181 +246,167 @@ func _process(delta: float) -> void:
 func _create_menu() -> void:
 	menu_layer = CanvasLayer.new()
 	menu_layer.name = "MenuLayer"
+	menu_layer.layer = 5
 	add_child(menu_layer)
+
+	# Cinematic F.D.F.R. front end: bold department branding, a clean command
+	# panel and a responsive single-column layout on phones.
 	var background := ColorRect.new()
-	background.color = Color(0.018, 0.035, 0.065)
+	background.name = "MenuBackground"
+	background.color = Color(0.035, 0.045, 0.055)
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu_layer.add_child(background)
-	# F.D.F.R. brand screen: original Florida fire and rescue identity.
-	var upper_glow := ColorRect.new()
-	upper_glow.anchor_left = 0.42
-	upper_glow.anchor_right = 1.0
-	upper_glow.anchor_top = 0.0
-	upper_glow.anchor_bottom = 1.0
-	upper_glow.color = Color(0.10, 0.025, 0.025, 0.94)
-	upper_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	menu_layer.add_child(upper_glow)
-	var accent := ColorRect.new()
-	accent.anchor_left = 0.435
-	accent.anchor_right = 0.442
-	accent.anchor_top = 0.0
-	accent.anchor_bottom = 1.0
-	accent.color = Color(0.82, 0.12, 0.08)
-	accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	menu_layer.add_child(accent)
+
+	var scene_tint := ColorRect.new()
+	scene_tint.name = "SceneTint"
+	scene_tint.anchor_left = 0.36
+	scene_tint.anchor_right = 1.0
+	scene_tint.anchor_top = 0.0
+	scene_tint.anchor_bottom = 1.0
+	scene_tint.color = Color(0.11, 0.035, 0.035, 0.92)
+	scene_tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	menu_layer.add_child(scene_tint)
+
+	var top_rule := ColorRect.new()
+	top_rule.anchor_left = 0.0
+	top_rule.anchor_right = 1.0
+	top_rule.anchor_top = 0.0
+	top_rule.anchor_bottom = 0.0
+	top_rule.offset_bottom = 5
+	top_rule.color = Color(0.82, 0.12, 0.09)
+	top_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	menu_layer.add_child(top_rule)
+
+	var brand := VBoxContainer.new()
+	brand.name = "BrandHeader"
+	brand.anchor_left = 0.055
+	brand.anchor_right = 0.43
+	brand.anchor_top = 0.08
+	brand.anchor_bottom = 0.28
+	brand.add_theme_constant_override("separation", 2)
+	menu_layer.add_child(brand)
+
+	var eyebrow := Label.new()
+	eyebrow.text = "FLORIDA DISTRICT  /  EMERGENCY SERVICES"
+	eyebrow.add_theme_font_size_override("font_size", 12)
+	eyebrow.add_theme_color_override("font_color", Color(0.93, 0.67, 0.37))
+	brand.add_child(eyebrow)
+
+	var brand_title := Label.new()
+	brand_title.text = "F.D.F.R."
+	brand_title.add_theme_font_size_override("font_size", 48)
+	brand_title.add_theme_color_override("font_color", Color(0.97, 0.96, 0.93))
+	brand.add_child(brand_title)
+
+	var brand_subtitle := Label.new()
+	brand_subtitle.text = "FIRE & RESCUE"
+	brand_subtitle.add_theme_font_size_override("font_size", 19)
+	brand_subtitle.add_theme_color_override("font_color", Color(0.90, 0.20, 0.14))
+	brand.add_child(brand_subtitle)
+
 	var right_panel := PanelContainer.new()
 	right_panel.name = "OperationsPanel"
-	right_panel.anchor_left = 0.49
-	right_panel.anchor_right = 0.95
-	right_panel.anchor_top = 0.15
+	right_panel.anchor_left = 0.52
+	right_panel.anchor_right = 0.94
+	right_panel.anchor_top = 0.12
 	right_panel.anchor_bottom = 0.84
-	right_panel.offset_left = 0
-	right_panel.offset_right = 0
-	right_panel.offset_top = 0
-	right_panel.offset_bottom = 0
-	var card_style := StyleBoxFlat.new()
-	card_style.bg_color = Color(0.055, 0.035, 0.035, 0.94)
-	card_style.border_color = Color(0.72, 0.16, 0.10)
-	card_style.set_border_width_all(1)
-	card_style.set_corner_radius_all(12)
-	right_panel.add_theme_stylebox_override("panel", card_style)
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.035, 0.045, 0.055, 0.93)
+	panel_style.border_color = Color(0.36, 0.12, 0.10, 0.95)
+	panel_style.set_border_width_all(1)
+	panel_style.set_corner_radius_all(5)
+	panel_style.content_margin_left = 24
+	panel_style.content_margin_right = 24
+	panel_style.content_margin_top = 24
+	panel_style.content_margin_bottom = 24
+	right_panel.add_theme_stylebox_override("panel", panel_style)
 	menu_layer.add_child(right_panel)
+
 	var info := VBoxContainer.new()
-	info.add_theme_constant_override("separation", 16)
+	info.add_theme_constant_override("separation", 12)
 	right_panel.add_child(info)
+
 	var status := Label.new()
-	status.text = "F.D.F.R.  /  FLORIDA DISTRICT FIRE & RESCUE"
-	status.add_theme_font_size_override("font_size", 13)
-	status.add_theme_color_override("font_color", Color(0.35, 0.72, 1.0))
+	status.text = "DEPARTMENT BRIEFING"
+	status.add_theme_font_size_override("font_size", 12)
+	status.add_theme_color_override("font_color", Color(0.93, 0.67, 0.37))
 	info.add_child(status)
+
 	var scene_title := Label.new()
-	scene_title.text = "YOUR CITY.\nYOUR CALL."
+	scene_title.text = "WHEN THE CALL\nCOMES IN."
 	scene_title.add_theme_font_size_override("font_size", 34)
-	scene_title.add_theme_color_override("font_color", Color(0.92, 0.96, 1.0))
+	scene_title.add_theme_color_override("font_color", Color(0.97, 0.96, 0.93))
 	info.add_child(scene_title)
+
 	var divider := ColorRect.new()
-	divider.custom_minimum_size = Vector2(0, 2)
-	divider.color = Color(0.88, 0.19, 0.10)
+	divider.custom_minimum_size = Vector2(0, 3)
+	divider.color = Color(0.82, 0.12, 0.09)
 	info.add_child(divider)
+
 	var description := Label.new()
-	description.text = "Answer emergency calls, drive the engine,\nand protect every district."
+	description.text = "Respond across the district. Protect the public. Bring every crew home."
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	description.add_theme_font_size_override("font_size", 17)
-	description.add_theme_color_override("font_color", Color(0.68, 0.76, 0.84))
+	description.add_theme_font_size_override("font_size", 16)
+	description.add_theme_color_override("font_color", Color(0.76, 0.78, 0.79))
 	info.add_child(description)
-	var feature_gap := Control.new()
-	feature_gap.custom_minimum_size.y = 18
-	info.add_child(feature_gap)
-	for feature in ["01  OPEN-WORLD DISTRICTS", "02  FIRE & RESCUE CALLS", "03  ENGINE RESPONSE"]:
+
+	var spacer := Control.new()
+	spacer.custom_minimum_size.y = 12
+	info.add_child(spacer)
+
+	for feature in ["01   FIRE SUPPRESSION", "02   TECHNICAL RESCUE", "03   EMERGENCY RESPONSE"]:
 		var feature_label := Label.new()
 		feature_label.text = feature
-		feature_label.add_theme_font_size_override("font_size", 14)
-		feature_label.add_theme_color_override("font_color", Color(0.8, 0.87, 0.94))
+		feature_label.add_theme_font_size_override("font_size", 13)
+		feature_label.add_theme_color_override("font_color", Color(0.88, 0.89, 0.87))
 		info.add_child(feature_label)
+
 	var footer := Label.new()
 	footer.name = "MenuFooter"
-	footer.anchor_left = 0.49
-	footer.anchor_right = 0.95
-	footer.anchor_top = 0.88
-	footer.anchor_bottom = 0.96
-	footer.text = "F.D.F.R.  •  FIRE & RESCUE  •  FLORIDA DISTRICT"
+	footer.anchor_left = 0.52
+	footer.anchor_right = 0.94
+	footer.anchor_top = 0.89
+	footer.anchor_bottom = 0.95
+	footer.text = "F.D.F.R.  /  FLORIDA DISTRICT FIRE & RESCUE"
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	footer.add_theme_font_size_override("font_size", 10)
-	footer.add_theme_color_override("font_color", Color(0.38, 0.5, 0.62))
+	footer.add_theme_color_override("font_color", Color(0.62, 0.63, 0.62))
 	menu_layer.add_child(footer)
+
 	var left_area := Control.new()
 	left_area.name = "MenuNavigation"
-	left_area.anchor_left = 0.045
-	left_area.anchor_right = 0.405
-	left_area.anchor_top = 0.06
-	left_area.anchor_bottom = 0.94
+	left_area.anchor_left = 0.055
+	left_area.anchor_right = 0.43
+	left_area.anchor_top = 0.32
+	left_area.anchor_bottom = 0.88
 	menu_layer.add_child(left_area)
+
 	var left_center := CenterContainer.new()
 	left_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	left_area.add_child(left_center)
+
 	menu_panel = VBoxContainer.new()
-	menu_panel.custom_minimum_size = Vector2(0, 0)
 	menu_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	menu_panel.add_theme_constant_override("separation", 11)
+	menu_panel.add_theme_constant_override("separation", 12)
 	left_center.add_child(menu_panel)
-	# On phones, use a single-column layout instead of squeezing the desktop split screen.
+
+	# Compact portrait layout on mobile; keep all important actions visible.
 	if OS.has_feature("mobile") or get_viewport().get_visible_rect().size.x < 760:
+		scene_tint.visible = false
 		right_panel.visible = false
-		upper_glow.visible = false
-		accent.visible = false
 		footer.visible = false
-		left_area.anchor_left = 0.06
-		left_area.anchor_right = 0.94
-		left_area.anchor_top = 0.04
-		left_area.anchor_bottom = 0.96
-		menu_panel.add_theme_constant_override("separation", 8)
-		for child in menu_panel.get_children():
-			if child is Button:
-				child.custom_minimum_size = Vector2(0, 44)
+		brand.anchor_left = 0.07
+		brand.anchor_right = 0.93
+		brand.anchor_top = 0.06
+		brand.anchor_bottom = 0.27
+		brand_title.add_theme_font_size_override("font_size", 40)
+		left_area.anchor_left = 0.07
+		left_area.anchor_right = 0.93
+		left_area.anchor_top = 0.31
+		left_area.anchor_bottom = 0.92
+		menu_panel.add_theme_constant_override("separation", 10)
 	_show_main_menu()
-
-func _clear_menu() -> void:
-	for child in menu_panel.get_children():
-		menu_panel.remove_child(child)
-		child.queue_free()
-	red_light = null
-	blue_light = null
-
-func _add_title() -> void:
-	var emblem := PanelContainer.new()
-	emblem.custom_minimum_size = Vector2(62, 62)
-	emblem.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	var emblem_style := StyleBoxFlat.new()
-	emblem_style.bg_color = Color(0.06, 0.17, 0.29)
-	emblem_style.border_color = Color(0.16, 0.55, 0.88)
-	emblem_style.set_border_width_all(2)
-	emblem_style.set_corner_radius_all(12)
-	emblem.add_theme_stylebox_override("panel", emblem_style)
-	menu_panel.add_child(emblem)
-	var badge_label := Label.new()
-	badge_label.text = "MH\nPD"
-	badge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	badge_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	badge_label.add_theme_font_size_override("font_size", 19)
-	badge_label.add_theme_color_override("font_color", Color(0.82, 0.92, 1.0))
-	emblem.add_child(badge_label)
-	var title := Label.new()
-	title.text = "FIRE DEPARTMENT\nSIMULATOR"
-	title.add_theme_font_size_override("font_size", 28)
-	title.add_theme_color_override("font_color", Color(0.95, 0.97, 1.0))
-	menu_panel.add_child(title)
-	var subtitle := Label.new()
-	subtitle.text = "MIRAGE HILLS FIRE & RESCUE"
-	subtitle.add_theme_font_size_override("font_size", 10)
-	subtitle.add_theme_color_override("font_color", Color(0.32, 0.67, 0.94))
-	menu_panel.add_child(subtitle)
-	var gap := Control.new()
-	gap.custom_minimum_size.y = 14
-	menu_panel.add_child(gap)
-
-func _add_button(text_value: String, callback: Callable) -> Button:
-	var button := Button.new()
-	button.text = text_value
-	button.custom_minimum_size = Vector2(250, 48)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.add_theme_font_size_override("font_size", 16)
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.045, 0.085, 0.13)
-	normal.border_color = Color(0.12, 0.25, 0.37)
-	normal.set_border_width_all(1)
-	normal.set_corner_radius_all(7)
-	var hover := StyleBoxFlat.new()
-	hover.bg_color = Color(0.06, 0.22, 0.36)
-	hover.border_color = Color(0.16, 0.62, 0.96)
-	hover.set_border_width_all(1)
-	hover.set_corner_radius_all(7)
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("hover", hover)
-	button.add_theme_color_override("font_color", Color.WHITE)
-	button.pressed.connect(callback)
-	menu_panel.add_child(button)
-	return button
 
 func _show_main_menu() -> void:
 	_clear_menu()
