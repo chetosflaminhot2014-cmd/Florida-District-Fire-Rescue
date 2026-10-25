@@ -1,6 +1,6 @@
-# Fire Department Simulator
+# F.D.F.R. — Florida District Fire & Rescue
 
-A lightweight Godot 4 project for Windows PC and Android, set in the fictional Mirage Hills Police Department.
+A lightweight Godot 4 project for Windows PC and Android, set in the fictional Florida District, an original fire-and-rescue setting.
 
 ## Current playable prototype
 
@@ -20,8 +20,8 @@ A lightweight Godot 4 project for Windows PC and Android, set in the fictional M
 ## Build downloads
 
 GitHub Actions workflow **Build Fire Department Simulator (PC + Android)** exports:
-- `FireDepartmentSimulator.exe` for Windows x86_64, artifact `FireDepartmentSimulator-Windows-PC`.
-- `FireDepartmentSimulator.apk` for Android arm64, artifact `FireDepartmentSimulator-Android-APK`.
+- `FireDepartmentSimulator.exe` for Windows x86_64, artifact `FDFR-Windows-PC`.
+- `FDFR.apk` for Android arm64, artifact `FDFR-Android-APK`.
 
 Open the repository's **Actions** tab and select the latest successful run. Download the Windows and Android artifacts separately.
 
