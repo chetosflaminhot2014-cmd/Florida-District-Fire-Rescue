@@ -12,6 +12,8 @@ on:
       - "export_presets.cfg"
       - ".github/workflows/build-game.yml"
       - "city-roads-glb-pack-72-free-cc0-3d-models-glb.zip"
+      - "tools/generate_florida_osm_map.py"
+      - "assets/florida_city/tampa_osm_map.json"
 
 permissions:
   contents: write
@@ -116,6 +118,21 @@ jobs:
           Vehicle GLB sizes in the source mirror: police 195336 B; ambulance 233612 B; firetruck 232448 B; sedan 172216 B; suv 207572 B.
           Personnel model sizes from the source pages: police officer 16.0 MB; firefighter 19.5 MB; paramedic 14.5 MB; civilian male 104 KB; civilian female 82 KB.
           EOF
+      - name: Generate real Tampa map from OpenStreetMap
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/generate_florida_osm_map.py
+          test -s assets/florida_city/tampa_osm_map.json
+          python3 - <<'PY'
+          import json
+          p = "assets/florida_city/tampa_osm_map.json"
+          data = json.load(open(p, encoding="utf-8"))
+          assert data.get("source") == "OpenStreetMap contributors"
+          assert len(data.get("roads", [])) >= 20, "OSM road coverage is too small"
+          assert len(data.get("buildings", [])) >= 20, "OSM building coverage is too small"
+          print("Verified Tampa OSM map:", len(data["roads"]), "roads,", len(data["buildings"]), "buildings")
+          PY
       - name: Commit downloaded assets into the repository
         shell: bash
         run: |
