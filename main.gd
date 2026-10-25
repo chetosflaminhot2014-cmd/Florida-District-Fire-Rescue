@@ -824,13 +824,94 @@ func _create_osm_city_map() -> bool:
 		var depth := clampf(float(building.get("d", 8.0)), 5.0, 17.0)
 		var height := clampf(float(building.get("h", 6.0)), 5.5, 30.0)
 		var target_size := Vector3(width, height, depth)
-		var variant_index := posmod(hash(str(building.get("kind", "building")) + str(building_index)), FLORIDA_BUILDING_SCENES.size())
-		if not _try_create_asset_building(Vector3(x, 0.0, z), target_size, variant_index, "Tampa_OSM_Building"):
-			_box("Tampa_OSM_Building_Fallback", target_size, Vector3(x, height * 0.5, z), Color(0.45, 0.49, 0.51), true)
+		var footprint_data: Array = building.get("footprint", [])
+		if footprint_data.size() >= 3:
+			_create_osm_footprint_building(footprint_data, height, str(building.get("kind", "building")), building_index)
+		else:
+			var variant_index := posmod(hash(str(building.get("kind", "building")) + str(building_index)), max(1, FLORIDA_BUILDING_SCENES.size()))
+			if not _try_create_asset_building(Vector3(x, 0.0, z), target_size, variant_index, "Tampa_OSM_Building"):
+				_box("Tampa_OSM_Building_Fallback", target_size, Vector3(x, height * 0.5, z), Color(0.45, 0.49, 0.51), true)
 		building_count += 1
 
 	print("F.D.F.R. real map loaded: Downtown Tampa, ", road_count, " road segments, ", building_count, " buildings.")
 	return true
+
+
+func _create_osm_footprint_building(footprint_data: Array, height: float, kind: String, building_index: int) -> void:
+	var polygon := PackedVector2Array()
+	for point_variant in footprint_data:
+		if point_variant is Array and point_variant.size() >= 2:
+			polygon.append(Vector2(float(point_variant[0]), float(point_variant[1])))
+	if polygon.size() < 3:
+		return
+	var triangles := Geometry2D.triangulate_polygon(polygon)
+	if triangles.is_empty():
+		return
+
+	var mesh_tool := SurfaceTool.new()
+	mesh_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# Roof: preserve the real OSM footprint rather than replacing every building
+	# with a rectangular block. Disable back-face culling for unusual OSM winding.
+	for tri in range(0, triangles.size(), 3):
+		var p0 := polygon[triangles[tri]]
+		var p1 := polygon[triangles[tri + 1]]
+		var p2 := polygon[triangles[tri + 2]]
+		var winding := (p1.x - p0.x) * (p2.y - p0.y) - (p1.y - p0.y) * (p2.x - p0.x)
+		if winding > 0.0:
+			var swap_point := p1
+			p1 = p2
+			p2 = swap_point
+		mesh_tool.add_vertex(Vector3(p0.x, height, p0.y))
+		mesh_tool.add_vertex(Vector3(p1.x, height, p1.y))
+		mesh_tool.add_vertex(Vector3(p2.x, height, p2.y))
+	# Exterior walls follow the surveyed footprint ring.
+	for edge in range(polygon.size()):
+		var a := polygon[edge]
+		var b := polygon[(edge + 1) % polygon.size()]
+		mesh_tool.add_vertex(Vector3(a.x, 0.0, a.y))
+		mesh_tool.add_vertex(Vector3(b.x, 0.0, b.y))
+		mesh_tool.add_vertex(Vector3(b.x, height, b.y))
+		mesh_tool.add_vertex(Vector3(a.x, 0.0, a.y))
+		mesh_tool.add_vertex(Vector3(b.x, height, b.y))
+		mesh_tool.add_vertex(Vector3(a.x, height, a.y))
+	mesh_tool.generate_normals()
+	var mesh := mesh_tool.commit()
+	if mesh == null:
+		return
+
+	var building_body := StaticBody3D.new()
+	building_body.name = "Tampa_OSM_Footprint_%d" % building_index
+	game_world.add_child(building_body)
+	var mesh_instance := MeshInstance3D.new()
+	mesh_instance.name = "SurveyedBuildingFootprint"
+	mesh_instance.mesh = mesh
+	var material := StandardMaterial3D.new()
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.roughness = 0.88
+	if kind in ["commercial", "office", "hotel", "apartments"]:
+		material.albedo_color = Color(0.48, 0.53, 0.57)
+	elif kind in ["industrial", "warehouse"]:
+		material.albedo_color = Color(0.48, 0.46, 0.41)
+	else:
+		material.albedo_color = Color(0.62, 0.58, 0.49)
+	mesh_instance.material_override = material
+	building_body.add_child(mesh_instance)
+	# Lightweight collision uses the footprint's bounding box for safe driving.
+	var min_x := polygon[0].x
+	var max_x := polygon[0].x
+	var min_z := polygon[0].y
+	var max_z := polygon[0].y
+	for point in polygon:
+		min_x = minf(min_x, point.x)
+		max_x = maxf(max_x, point.x)
+		min_z = minf(min_z, point.y)
+		max_z = maxf(max_z, point.y)
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(maxf(1.0, max_x - min_x), height, maxf(1.0, max_z - min_z))
+	collision.shape = shape
+	collision.position = Vector3((min_x + max_x) * 0.5, height * 0.5, (min_z + max_z) * 0.5)
+	building_body.add_child(collision)
 
 
 func _create_osm_map_signage() -> void:
