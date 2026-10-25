@@ -551,11 +551,7 @@ func _create_road_network_from_pack() -> void:
 	var straight_path := road_root + "road-straight.glb"
 	var cross_path := road_root + "road-crossroad.glb"
 	if not ResourceLoader.exists(straight_path) or not ResourceLoader.exists(cross_path):
-		# Safe fallback if the asset pack is absent in a local editor checkout.
-		for road_z in [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]:
-			_box("Street_NS_Fallback", Vector3(12, 0.08, 440), Vector3(road_z, 0.0, 0), Color(0.105, 0.12, 0.14), false)
-		for road_x in [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]:
-			_box("Street_EW_Fallback", Vector3(440, 0.08, 12), Vector3(0, 0.015, road_x), Color(0.105, 0.12, 0.14), false)
+		_create_visible_road_surfaces()
 		return
 
 	var road_lines: Array[float] = [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]
@@ -573,6 +569,29 @@ func _create_road_network_from_pack() -> void:
 	for road_x in [-120.0, 0.0, 120.0]:
 		for road_z in [-120.0, 0.0, 120.0]:
 			_place_road_model("road-intersection-line.glb", Vector3(road_x, 0.025, road_z), 0.0, Vector3(1.0, 1.0, 1.0))
+
+	# Guaranteed visible asphalt and lane markings sit above imported tile meshes.
+	_create_visible_road_surfaces()
+
+
+func _create_visible_road_surfaces() -> void:
+	var road_lines: Array[float] = [-180.0, -120.0, -60.0, 0.0, 60.0, 120.0, 180.0]
+	var asphalt := Color(0.075, 0.085, 0.095)
+	var edge_paint := Color(0.88, 0.88, 0.80)
+	var center_paint := Color(0.96, 0.72, 0.12)
+	for road_x in road_lines:
+		_box("Visible_Asphalt_NS", Vector3(14.0, 0.12, 440.0), Vector3(road_x, 0.045, 0.0), asphalt, false)
+		_box("Road_Edge_NS_Left", Vector3(0.16, 0.025, 440.0), Vector3(road_x - 6.1, 0.115, 0.0), edge_paint, false)
+		_box("Road_Edge_NS_Right", Vector3(0.16, 0.025, 440.0), Vector3(road_x + 6.1, 0.115, 0.0), edge_paint, false)
+		_box("Road_Center_NS_Left", Vector3(0.12, 0.026, 440.0), Vector3(road_x - 0.16, 0.117, 0.0), center_paint, false)
+		_box("Road_Center_NS_Right", Vector3(0.12, 0.026, 440.0), Vector3(road_x + 0.16, 0.117, 0.0), center_paint, false)
+	for road_z in road_lines:
+		_box("Visible_Asphalt_EW", Vector3(440.0, 0.12, 14.0), Vector3(0.0, 0.046, road_z), asphalt, false)
+		_box("Road_Edge_EW_North", Vector3(440.0, 0.025, 0.16), Vector3(0.0, 0.116, road_z - 6.1), edge_paint, false)
+		_box("Road_Edge_EW_South", Vector3(440.0, 0.025, 0.16), Vector3(0.0, 0.116, road_z + 6.1), edge_paint, false)
+		_box("Road_Center_EW_Left", Vector3(440.0, 0.026, 0.12), Vector3(0.0, 0.118, road_z - 0.16), center_paint, false)
+		_box("Road_Center_EW_Right", Vector3(440.0, 0.026, 0.12), Vector3(0.0, 0.118, road_z + 0.16), center_paint, false)
+
 
 func _place_road_model(model_file: String, world_position: Vector3, rotation_y: float = 0.0, model_scale: Vector3 = Vector3.ONE) -> void:
 	var model_path := "res://assets/city_roads/kenney_city_roads_glb_cc0_v1/models_glb/" + model_file
@@ -1091,9 +1110,9 @@ func _create_vehicle() -> void:
 	# La colisión independiente mantiene conducción y choques aunque el modelo sea solo visual.
 	var shape_node := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = Vector3(2.6, 2.2, 5.5)
+	shape.size = Vector3(3.6, 3.0, 8.5)
 	shape_node.shape = shape
-	shape_node.position.y = 1.1
+	shape_node.position.y = 1.5
 	vehicle.add_child(shape_node)
 
 	var patrol_scene := load("res://fire_truck.glb") as PackedScene
@@ -1103,14 +1122,14 @@ func _create_vehicle() -> void:
 		if patrol_visual is Node3D:
 			patrol_visual.position = Vector3.ZERO
 		vehicle.add_child(patrol_visual)
-		_fit_imported_model(patrol_visual, Vector3(2.6, 2.5, 5.5))
+		_fit_imported_model(patrol_visual, Vector3(3.6, 3.6, 8.5))
 	else:
 		push_error("No se pudo cargar res://fire_truck.glb")
 
 	# Luces de emergencia funcionales sobre el techo, independientes del modelo.
-	patrol_red_light = _add_person_box(vehicle, Vector3(0.32, 0.13, 0.22), Vector3(-0.34, 1.52, -0.05), Color(0.95, 0.025, 0.025))
-	_add_person_box(vehicle, Vector3(0.24, 0.13, 0.22), Vector3(0.0, 1.52, -0.05), Color(0.94, 0.94, 0.88))
-	patrol_blue_light = _add_person_box(vehicle, Vector3(0.32, 0.13, 0.22), Vector3(0.34, 1.52, -0.05), Color(0.025, 0.12, 0.98))
+	patrol_red_light = _add_person_box(vehicle, Vector3(0.42, 0.16, 0.28), Vector3(-0.45, 2.05, -0.05), Color(0.95, 0.025, 0.025))
+	_add_person_box(vehicle, Vector3(0.30, 0.16, 0.28), Vector3(0.0, 2.05, -0.05), Color(0.94, 0.94, 0.88))
+	patrol_blue_light = _add_person_box(vehicle, Vector3(0.42, 0.16, 0.28), Vector3(0.45, 2.05, -0.05), Color(0.025, 0.12, 0.98))
 
 
 func _create_service_vehicles() -> void:
