@@ -266,51 +266,103 @@ func _process(delta: float) -> void:
 			status_label.text = "BOMBERO A PIE · WASD · E PARA SUBIR/BAJAR · NPC: " + str(npc_nodes.size())
 
 func _create_menu_scene_preview() -> void:
+	# Menú cinematográfico: una escena 3D de calle de Florida, no una pantalla gris.
+	# Se mantiene ligera para que también funcione en Android.
 	var preview := Node3D.new()
 	preview.name = "MenuScenePreview"
 	add_child(preview)
 
 	var environment_node := WorldEnvironment.new()
 	var environment := Environment.new()
-	environment.background_mode = Environment.BG_COLOR
-	environment.background_color = Color(0.16, 0.22, 0.29)
+	environment.background_mode = Environment.BG_SKY
+	var sky := Sky.new()
+	var sky_material := ProceduralSkyMaterial.new()
+	sky_material.sky_top_color = Color(0.10, 0.30, 0.52)
+	sky_material.sky_horizon_color = Color(0.70, 0.79, 0.84)
+	sky_material.ground_bottom_color = Color(0.12, 0.16, 0.17)
+	sky_material.ground_horizon_color = Color(0.58, 0.65, 0.65)
+	sky_material.sun_angle_max = 18.0
+	sky_material.use_debanding = true
+	sky.sky_material = sky_material
+	environment.sky = sky
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color(0.72, 0.78, 0.88)
-	environment.ambient_light_energy = 0.85
+	environment.ambient_light_color = Color(0.72, 0.80, 0.88)
+	environment.ambient_light_energy = 0.8
+	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment_node.environment = environment
 	preview.add_child(environment_node)
 
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-38, -28, 0)
-	sun.light_energy = 1.4
+	sun.light_energy = 1.25
 	sun.shadow_enabled = not OS.has_feature("mobile")
 	preview.add_child(sun)
 
-	# Asphalt forecourt and concrete apron.
-	_menu_preview_box(preview, "PreviewGround", Vector3(42, 0.25, 34), Vector3(0, -0.2, 0), Color(0.12, 0.14, 0.16))
-	_menu_preview_box(preview, "StationApron", Vector3(22, 0.06, 12), Vector3(0, -0.045, -2.5), Color(0.31, 0.32, 0.31))
-	_menu_preview_box(preview, "ApronLineLeft", Vector3(0.12, 0.025, 8), Vector3(-7.2, 0.005, 1.2), Color(0.92, 0.84, 0.62))
-	_menu_preview_box(preview, "ApronLineRight", Vector3(0.12, 0.025, 8), Vector3(7.2, 0.005, 1.2), Color(0.92, 0.84, 0.62))
+	# Wide Florida street and sidewalks.
+	_menu_preview_box(preview, "FloridaGround", Vector3(100, 0.3, 110), Vector3(0, -0.25, -16), Color(0.20, 0.30, 0.22))
+	_menu_preview_box(preview, "CityRoad", Vector3(17, 0.08, 100), Vector3(0, -0.035, -19), Color(0.095, 0.11, 0.12))
+	_menu_preview_box(preview, "SidewalkLeft", Vector3(4.0, 0.14, 100), Vector3(-10.5, 0.01, -19), Color(0.52, 0.53, 0.49))
+	_menu_preview_box(preview, "SidewalkRight", Vector3(4.0, 0.14, 100), Vector3(10.5, 0.01, -19), Color(0.52, 0.53, 0.49))
+	_menu_preview_box(preview, "CurbLeft", Vector3(0.22, 0.24, 100), Vector3(-8.45, 0.08, -19), Color(0.80, 0.79, 0.71))
+	_menu_preview_box(preview, "CurbRight", Vector3(0.22, 0.24, 100), Vector3(8.45, 0.08, -19), Color(0.80, 0.79, 0.71))
+	for mark_z in range(-62, 24, 8):
+		_menu_preview_box(preview, "RoadLaneDash", Vector3(0.18, 0.025, 3.2), Vector3(0, 0.02, float(mark_z)), Color(0.91, 0.84, 0.58))
+	for edge_x in [-7.9, 7.9]:
+		_menu_preview_box(preview, "RoadEdgeLine", Vector3(0.12, 0.025, 100), Vector3(edge_x, 0.02, -19), Color(0.88, 0.88, 0.78))
 
-	# Station facade, roof trim and two tall engine bays facing the camera.
-	_menu_preview_box(preview, "PreviewStation", Vector3(16, 6.2, 5.8), Vector3(0, 3.1, -6.3), Color(0.37, 0.085, 0.075))
-	_menu_preview_box(preview, "PreviewStationRoof", Vector3(16.5, 0.28, 6.2), Vector3(0, 6.25, -6.3), Color(0.075, 0.09, 0.11))
-	_menu_preview_box(preview, "PreviewStationBase", Vector3(16.2, 0.28, 0.25), Vector3(0, 0.2, -3.35), Color(0.78, 0.78, 0.72))
-	for bay_x in [-4.0, 4.0]:
-		_menu_preview_box(preview, "PreviewBayDoor", Vector3(5.1, 4.0, 0.18), Vector3(bay_x, 2.25, -3.34), Color(0.07, 0.12, 0.16))
-		for stripe in range(5):
-			_menu_preview_box(preview, "PreviewBayStripe", Vector3(4.7, 0.065, 0.035), Vector3(bay_x, 0.65 + float(stripe) * 0.78, -3.22), Color(0.55, 0.61, 0.65))
-	_menu_preview_box(preview, "PreviewSignBoard", Vector3(9.0, 0.82, 0.18), Vector3(0, 5.25, -3.28), Color(0.065, 0.08, 0.1))
-	var station_sign := Label3D.new()
-	station_sign.text = "F.D.F.R.  •  STATION 01"
-	station_sign.position = Vector3(0, 5.28, -3.14)
-	station_sign.font_size = 42
-	station_sign.outline_size = 8
-	station_sign.modulate = Color(1.0, 0.82, 0.58)
-	station_sign.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	preview.add_child(station_sign)
+	# Commercial blocks of different heights give the camera a city skyline.
+	var shop_colors := [
+		Color(0.69, 0.61, 0.48), Color(0.63, 0.70, 0.70),
+		Color(0.74, 0.70, 0.61), Color(0.53, 0.59, 0.62),
+		Color(0.74, 0.75, 0.68), Color(0.60, 0.55, 0.48)
+	]
+	for side in [-1.0, 1.0]:
+		for i in range(6):
+			var z := -14.0 - float(i) * 12.0
+			var height := 5.0 + float((i * 3) % 5)
+			var width := 7.0 + float(i % 3) * 1.8
+			var x := side * (15.0 + float(i % 2) * 2.0)
+			_menu_preview_box(preview, "FloridaShop", Vector3(width, height, 8.5), Vector3(x, height * 0.5, z), shop_colors[i])
+			_menu_preview_box(preview, "ShopRoofTrim", Vector3(width + 0.2, 0.22, 8.7), Vector3(x, height + 0.08, z), Color(0.16, 0.20, 0.22))
+			_menu_preview_box(preview, "ShopWindowBand", Vector3(width * 0.78, 1.25, 0.09), Vector3(x, 1.75, z + 4.3), Color(0.10, 0.23, 0.29))
+			_menu_preview_box(preview, "ShopAwning", Vector3(width * 0.84, 0.22, 1.0), Vector3(x, 2.55, z + 4.75), Color(0.72, 0.12, 0.09) if i % 2 == 0 else Color(0.83, 0.82, 0.72))
+			for window_x in [-1.0, 1.0]:
+				_menu_preview_box(preview, "UpperWindow", Vector3(1.05, 1.25, 0.08), Vector3(x + window_x, minf(height - 1.0, 4.0), z + 4.32), Color(0.13, 0.26, 0.32))
 
-	# Use the project's actual fire truck model. If it is missing, draw a readable fallback truck.
+	# Palm trees along the sidewalks make the location read as Florida.
+	for side in [-1.0, 1.0]:
+		for i in range(5):
+			var tree_z := 5.0 - float(i) * 14.0
+			var tree_x := side * (12.4 + float(i % 2) * 1.2)
+			var trunk := MeshInstance3D.new()
+			trunk.name = "FloridaPalmTrunk"
+			var trunk_mesh := CylinderMesh.new()
+			trunk_mesh.top_radius = 0.16
+			trunk_mesh.bottom_radius = 0.28
+			trunk_mesh.height = 4.6
+			trunk.mesh = trunk_mesh
+			var trunk_mat := StandardMaterial3D.new()
+			trunk_mat.albedo_color = Color(0.43, 0.30, 0.18)
+			trunk_mat.roughness = 1.0
+			trunk.mesh.surface_set_material(0, trunk_mat)
+			trunk.position = Vector3(tree_x, 2.3, tree_z)
+			preview.add_child(trunk)
+			for frond_index in range(6):
+				var frond := MeshInstance3D.new()
+				frond.name = "PalmFrond"
+				var frond_mesh := BoxMesh.new()
+				frond_mesh.size = Vector3(0.16, 0.10, 2.6)
+				frond.mesh = frond_mesh
+				var frond_mat := StandardMaterial3D.new()
+				frond_mat.albedo_color = Color(0.12, 0.34, 0.20)
+				frond_mat.roughness = 1.0
+				frond.mesh.surface_set_material(0, frond_mat)
+				frond.position = Vector3(tree_x, 4.55, tree_z)
+				frond.rotation.y = TAU * float(frond_index) / 6.0
+				frond.rotation.x = -0.20
+				preview.add_child(frond)
+
+	# Fire engine is the focal point, placed to the right so the menu remains legible.
 	var truck_path := "res://fire_truck.glb"
 	if ResourceLoader.exists(truck_path):
 		var truck_scene := load(truck_path) as PackedScene
@@ -318,16 +370,17 @@ func _create_menu_scene_preview() -> void:
 			var truck := truck_scene.instantiate() as Node3D
 			if truck != null:
 				truck.name = "MenuFireEngine"
-				truck.position = Vector3(0.0, 0.0, 2.2)
+				truck.position = Vector3(3.4, 0.0, 3.2)
+				truck.rotation_degrees.y = -8.0
 				preview.add_child(truck)
 				_fit_imported_model(truck, Vector3(3.7, 3.7, 8.6))
 	else:
-		_menu_preview_box(preview, "FallbackTruckBody", Vector3(3.1, 2.1, 6.6), Vector3(0, 1.25, 2.2), Color(0.72, 0.055, 0.045))
-		_menu_preview_box(preview, "FallbackTruckCab", Vector3(2.8, 1.6, 2.1), Vector3(0, 2.65, 4.1), Color(0.78, 0.075, 0.055))
-		_menu_preview_box(preview, "FallbackTruckWindshield", Vector3(2.25, 0.82, 0.06), Vector3(0, 2.85, 5.18), Color(0.09, 0.19, 0.25))
-		_menu_preview_box(preview, "FallbackTruckLightbar", Vector3(1.65, 0.18, 0.32), Vector3(0, 3.55, 4.0), Color(0.95, 0.05, 0.035))
-	for wheel_x in [-1.58, 1.58]:
-		for wheel_z in [-0.05, 3.85]:
+		_menu_preview_box(preview, "FallbackTruckBody", Vector3(3.1, 2.1, 6.6), Vector3(3.4, 1.25, 3.2), Color(0.72, 0.055, 0.045))
+		_menu_preview_box(preview, "FallbackTruckCab", Vector3(2.8, 1.6, 2.1), Vector3(3.4, 2.65, 5.1), Color(0.78, 0.075, 0.055))
+		_menu_preview_box(preview, "FallbackTruckWindshield", Vector3(2.25, 0.82, 0.06), Vector3(3.4, 2.85, 6.18), Color(0.09, 0.19, 0.25))
+		_menu_preview_box(preview, "FallbackTruckLightbar", Vector3(1.65, 0.18, 0.32), Vector3(3.4, 3.55, 5.0), Color(0.95, 0.05, 0.035))
+	for wheel_x in [1.82, 4.98]:
+		for wheel_z in [1.15, 5.05]:
 			var wheel := MeshInstance3D.new()
 			wheel.name = "PreviewTruckWheel"
 			var wheel_mesh := CylinderMesh.new()
@@ -335,19 +388,31 @@ func _create_menu_scene_preview() -> void:
 			wheel_mesh.bottom_radius = 0.48
 			wheel_mesh.height = 0.28
 			wheel.mesh = wheel_mesh
-			wheel.position = Vector3(wheel_x, 0.48, 2.2 + wheel_z)
+			wheel.position = Vector3(wheel_x, 0.48, wheel_z)
 			wheel.rotation_degrees.z = 90
 			var wheel_material := StandardMaterial3D.new()
 			wheel_material.albedo_color = Color(0.025, 0.03, 0.035)
 			wheel.mesh.surface_set_material(0, wheel_material)
 			preview.add_child(wheel)
 
+	# Static firefighter silhouette beside the truck to sell the gameplay perspective.
+	var firefighter := Node3D.new()
+	firefighter.name = "MenuFirefighter"
+	firefighter.position = Vector3(0.5, 0.0, 3.1)
+	preview.add_child(firefighter)
+	_menu_preview_box(firefighter, "FirefighterBoots", Vector3(0.48, 0.28, 0.30), Vector3(0, 0.14, 0), Color(0.08, 0.09, 0.10))
+	_menu_preview_box(firefighter, "FirefighterLegs", Vector3(0.52, 0.82, 0.30), Vector3(0, 0.68, 0), Color(0.16, 0.20, 0.22))
+	_menu_preview_box(firefighter, "FirefighterJacket", Vector3(0.78, 0.88, 0.42), Vector3(0, 1.48, 0), Color(0.17, 0.20, 0.22))
+	_menu_preview_box(firefighter, "FirefighterReflectiveStripe", Vector3(0.80, 0.10, 0.44), Vector3(0, 1.38, 0), Color(0.94, 0.66, 0.12))
+	_menu_preview_box(firefighter, "FirefighterHelmet", Vector3(0.48, 0.24, 0.45), Vector3(0, 2.12, 0), Color(0.84, 0.12, 0.06))
+
+	# A broad three-quarter camera view resembles a paused gameplay scene.
 	var camera := Camera3D.new()
 	camera.name = "MenuCamera"
-	camera.fov = 48.0
-	camera.position = Vector3(10.5, 7.2, 15.5)
+	camera.fov = 52.0
+	camera.position = Vector3(14.5, 8.5, 18.0)
 	preview.add_child(camera)
-	camera.look_at(Vector3(0, 2.1, -1.0), Vector3.UP)
+	camera.look_at(Vector3(0.0, 2.0, -9.0), Vector3.UP)
 	camera.current = true
 
 
