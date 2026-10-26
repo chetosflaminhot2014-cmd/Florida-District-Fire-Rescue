@@ -39,6 +39,20 @@ class MinimapControl extends Control:
 const WORLD_LIMIT := 400.0
 # Earth2Road exports a complete Godot scene plus its dependent resources.
 # Place the exported scene and its resource folders under assets/earth2road/tampa/.
+const GEN_MAP_COMBINED_CANDIDATES := [
+	"res://assets/florida_city/gen_map/city.glb",
+	"res://assets/florida_city/gen_map/map.glb",
+	"res://assets/florida_city/gen_map/combined.glb",
+	"res://assets/florida_city/gen_map/scene.glb"
+]
+const GEN_MAP_PART_CANDIDATES := [
+	"res://assets/florida_city/gen_map/terrain.glb",
+	"res://assets/florida_city/gen_map/roads.glb",
+	"res://assets/florida_city/gen_map/buildings.glb",
+	"res://assets/florida_city/gen_map/water.glb",
+	"res://assets/florida_city/gen_map/vegetation.glb",
+	"res://assets/florida_city/gen_map/street_furniture.glb"
+]
 const EARTH2ROAD_SCENE_CANDIDATES := [
 	"res://assets/earth2road/tampa/map.tscn",
 	"res://assets/earth2road/tampa/world.tscn",
@@ -753,9 +767,10 @@ func _create_world() -> void:
 	world_sun.shadow_enabled = graphics_quality >= 2 and not OS.has_feature("mobile")
 	game_world.add_child(world_sun)
 	_box("Ground", Vector3(840, 1, 840), Vector3(0, -0.55, 0), Color(0.19, 0.29, 0.19), true)
-	# Prefer the full Earth2Road-exported Godot scene, including its road network,
-	# junctions, sidewalks and generated city geometry. Keep the older imports as fallbacks.
-	var has_real_city_map := _create_earth2road_city_map()
+	# Prefer a city exported from gen-map as GLB, then Earth2Road, then the bundled OSM fallback.
+	var has_real_city_map := _create_gen_map_city()
+	if not has_real_city_map:
+		has_real_city_map = _create_earth2road_city_map()
 	if not has_real_city_map:
 		has_real_city_map = _create_prebuilt_tampa_model()
 	if not has_real_city_map:
@@ -776,6 +791,45 @@ func _create_world() -> void:
 	else:
 		_create_osm_map_signage()
 	_apply_graphics_quality()
+
+
+func _create_gen_map_city() -> bool:
+	# Put gen-map's exported GLB files in assets/florida_city/gen_map/.
+	# Prefer one combined scene when present to avoid loading overlapping duplicate geometry.
+	for scene_path in GEN_MAP_COMBINED_CANDIDATES:
+		if not ResourceLoader.exists(scene_path):
+			continue
+		var packed_scene := load(scene_path) as PackedScene
+		if packed_scene == null:
+			push_warning("No se pudo cargar el GLB de gen-map: " + scene_path)
+			continue
+		var city_instance := packed_scene.instantiate() as Node3D
+		if city_instance == null:
+			push_warning("El GLB de gen-map no produjo un Node3D: " + scene_path)
+			continue
+		city_instance.name = "GenMapCity"
+		game_world.add_child(city_instance)
+		print("F.D.F.R. mapa gen-map cargado: ", scene_path)
+		return true
+
+	var loaded_parts := 0
+	for scene_path in GEN_MAP_PART_CANDIDATES:
+		if not ResourceLoader.exists(scene_path):
+			continue
+		var packed_scene := load(scene_path) as PackedScene
+		if packed_scene == null:
+			push_warning("No se pudo cargar el componente GLB de gen-map: " + scene_path)
+			continue
+		var part_instance := packed_scene.instantiate() as Node3D
+		if part_instance == null:
+			continue
+		part_instance.name = "GenMap_" + scene_path.get_file().get_basename()
+		game_world.add_child(part_instance)
+		loaded_parts += 1
+	if loaded_parts > 0:
+		print("F.D.F.R. mapa gen-map cargado: ", loaded_parts, " componentes GLB.")
+		return true
+	return false
 
 
 func _create_osm_city_map() -> bool:
