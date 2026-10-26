@@ -77,11 +77,12 @@ func _build_panel() -> void:
 	_panel = PanelContainer.new()
 	_panel.anchor_left = 0.02
 	_panel.anchor_top = 0.12
-	_panel.anchor_right = 0.48
+	_panel.anchor_right = 0.34
 	_panel.anchor_bottom = 0.12
-	_panel.offset_bottom = 270
+	_panel.offset_bottom = 218
 	add_child(_panel)
 	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 4)
 	_panel.add_child(column)
 	var title := Label.new()
 	title.text = "911 · CENTRAL DE BOMBEROS"
@@ -90,6 +91,7 @@ func _build_panel() -> void:
 	_call_label = Label.new()
 	_call_label.text = "Central: unidades disponibles, permanezcan atentas."
 	_call_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_call_label.add_theme_font_size_override("font_size", 13)
 	column.add_child(_call_label)
 	_accept_button = Button.new()
 	_accept_button.text = "ACEPTAR LLAMADA"
@@ -101,7 +103,7 @@ func _build_panel() -> void:
 	score_label.name = "ScoreLabel"
 	column.add_child(score_label)
 	_radio_log = RichTextLabel.new()
-	_radio_log.custom_minimum_size = Vector2(250, 72)
+	_radio_log.custom_minimum_size = Vector2(180, 42)
 	_radio_log.fit_content = false
 	_radio_log.scroll_following = true
 	column.add_child(_radio_log)
