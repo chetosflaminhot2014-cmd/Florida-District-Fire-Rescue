@@ -2128,6 +2128,7 @@ func _update_dispatch_arrival() -> void:
 		minimap.target_active = false
 		minimap.queue_redraw()
 	if is_instance_valid(dispatch_layer):
+		dispatch_layer.call("mark_arrived")
 		dispatch_layer.call("complete_arrival_mission")
 
 func _on_mission_completed(reward: int, description: String) -> void:
