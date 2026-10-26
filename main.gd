@@ -161,6 +161,8 @@ var gas_station_positions: Array[Vector3] = []
 var fuel_level := 100.0
 var refuel_notice_timer := 0.0
 var vehicle_cockpit_camera := false
+# First-person is the default on foot; V / the mobile camera button switches perspective.
+var first_person_mode := true
 var graphics_quality := 2
 var world_sun: DirectionalLight3D
 var world_environment: WorldEnvironment
@@ -1680,16 +1682,17 @@ func _create_player(female: bool) -> void:
 	player_visual.name = "PlayerFirefighter"
 	player_visual.scale = Vector3(0.86, 0.86, 0.86)
 	player_visual.position.y = 0.0
+	player_visual.visible = not first_person_mode
 	player.add_child(player_visual)
 	_setup_player_animations(player_visual)
 	camera_pivot = Node3D.new()
-	camera_pivot.position.y = 1.55
+	camera_pivot.position.y = 1.62
 	player.add_child(camera_pivot)
 	camera = Camera3D.new()
 	camera.name = "FollowCamera"
-	camera.position = Vector3(0, 1.0, 5.5)
-	camera.rotation_degrees.x = -10
 	camera.current = true
+	camera.position = Vector3.ZERO if first_person_mode else Vector3(0, 0.25, 4.2)
+	camera.rotation_degrees.x = 0 if first_person_mode else -8
 	camera_pivot.add_child(camera)
 
 func _setup_player_animations(root: Node) -> void:
@@ -2532,9 +2535,17 @@ func _toggle_siren() -> void:
 		status_label.text = "SIRENA ACTIVADA" if siren_enabled else "SIRENA DESACTIVADA"
 
 func _toggle_vehicle_camera() -> void:
-	if not driving or not is_instance_valid(camera):
+	if not is_instance_valid(camera) or not is_instance_valid(camera_pivot):
+		return
+	if not driving:
+		first_person_mode = not first_person_mode
+		camera_pivot.position = Vector3(0, 1.62, 0)
+		camera.position = Vector3.ZERO if first_person_mode else Vector3(0, 0.25, 4.2)
+		camera.rotation_degrees = Vector3.ZERO if first_person_mode else Vector3(-8, 0, 0)
+		if is_instance_valid(player_visual):
+			player_visual.visible = not first_person_mode
 		if is_instance_valid(status_label):
-			status_label.text = "SUBE AL CAMIÓN PARA CAMBIAR LA CÁMARA"
+			status_label.text = "PRIMERA PERSONA · V / CÁMARA" if first_person_mode else "TERCERA PERSONA · V / CÁMARA"
 		return
 	vehicle_cockpit_camera = not vehicle_cockpit_camera
 	if vehicle_cockpit_camera:
@@ -2578,13 +2589,16 @@ func _interact_vehicle() -> void:
 		driving = false
 		vehicle_speed = 0.0
 		player.visible = true
+		if is_instance_valid(player_visual):
+			player_visual.visible = not first_person_mode
 		player.global_position = vehicle.global_position + vehicle.global_transform.basis.x * 2.0 + Vector3(0,0.1,0)
 		player.velocity = Vector3.ZERO
 		camera_pivot.reparent(player)
-		camera_pivot.position = Vector3(0,1.55,0)
+		camera_pivot.position = Vector3(0,1.62,0)
 		camera_pivot.rotation = Vector3.ZERO
 		vehicle_cockpit_camera = false
-		camera.position = Vector3(0,1.0,5.5)
+		camera.position = Vector3.ZERO if first_person_mode else Vector3(0,0.25,4.2)
+		camera.rotation_degrees = Vector3.ZERO if first_person_mode else Vector3(-8,0,0)
 	else:
 		if player.global_position.distance_to(vehicle.global_position) <= 5.0:
 			driving = true
@@ -2684,6 +2698,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif event.keycode == KEY_G:
 			_try_refuel()
 		elif event.keycode == KEY_C and driving:
+			_toggle_vehicle_camera()
+		elif event.keycode == KEY_V and not driving:
 			_toggle_vehicle_camera()
 		elif event.keycode == KEY_H:
 			_toggle_siren()
