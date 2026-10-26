@@ -2296,8 +2296,9 @@ func _create_hud() -> void:
 	hud_layer.name = "HUD"
 	add_child(hud_layer)
 
-	# HUD despejado para móvil: mapa pequeño arriba a la izquierda y solo
-	# tres acciones principales visibles. Las acciones secundarias van en MÁS.
+	# HUD móvil: controles secundarios siempre cerrados al entrar; evita que
+	# una sesión anterior deje la pantalla cubierta por botones.
+	secondary_controls_open = false
 	var top := PanelContainer.new()
 	top.name = "StatusBar"
 	top.anchor_left = 0.22
@@ -2363,11 +2364,8 @@ func _create_hud() -> void:
 			secondary.visible = false
 	var more_button := hud_layer.find_child("Touch_MÁS  +", true, false)
 	if is_instance_valid(more_button):
+		more_button.text = "MÁS  +"
 		more_button.pressed.connect(_toggle_secondary_controls)
-	for control_name in ["LUCES", "CORRER", "FRENO", "REPOSTAR", "CÁMARA"]:
-		var secondary := hud_layer.find_child("Touch_" + control_name, true, false)
-		if is_instance_valid(secondary):
-			secondary.visible = false
 
 func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size: Vector2, on_down: Callable, on_up: Callable, right_side := false) -> void:
 	var b := Button.new()
