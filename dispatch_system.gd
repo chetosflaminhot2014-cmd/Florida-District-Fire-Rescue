@@ -75,35 +75,47 @@ func _process(delta: float) -> void:
 
 func _build_panel() -> void:
 	_panel = PanelContainer.new()
-	_panel.anchor_left = 0.02
-	_panel.anchor_top = 0.12
-	_panel.anchor_right = 0.34
-	_panel.anchor_bottom = 0.12
-	_panel.offset_bottom = 218
+	# On mobile, keep the 911 panel on the upper-right so it does not cover
+	# the minimap in the upper-left or the movement controls at the bottom.
+	if OS.has_feature("mobile"):
+		_panel.anchor_left = 0.39
+		_panel.anchor_top = 0.105
+		_panel.anchor_right = 0.98
+		_panel.anchor_bottom = 0.105
+		_panel.offset_bottom = 194
+	else:
+		_panel.anchor_left = 0.02
+		_panel.anchor_top = 0.12
+		_panel.anchor_right = 0.34
+		_panel.anchor_bottom = 0.12
+		_panel.offset_bottom = 218
 	add_child(_panel)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 4)
+	column.add_theme_constant_override("separation", 3 if OS.has_feature("mobile") else 4)
 	_panel.add_child(column)
 	var title := Label.new()
 	title.text = "911 · CENTRAL DE BOMBEROS"
 	title.add_theme_color_override("font_color", Color(0.55, 0.78, 1.0))
+	title.add_theme_font_size_override("font_size", 12 if OS.has_feature("mobile") else 14)
 	column.add_child(title)
 	_call_label = Label.new()
 	_call_label.text = "Central: unidades disponibles, permanezcan atentas."
 	_call_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_call_label.add_theme_font_size_override("font_size", 13)
+	_call_label.add_theme_font_size_override("font_size", 12 if OS.has_feature("mobile") else 13)
 	column.add_child(_call_label)
 	_accept_button = Button.new()
 	_accept_button.text = "ACEPTAR LLAMADA"
+	_accept_button.custom_minimum_size.y = 34 if OS.has_feature("mobile") else 0
 	_accept_button.pressed.connect(_accept_call)
 	_accept_button.disabled = true
 	column.add_child(_accept_button)
 	var score_label := Label.new()
 	score_label.text = "SERVICIOS: 0 · CRÉDITOS: 0"
 	score_label.name = "ScoreLabel"
+	score_label.add_theme_font_size_override("font_size", 11 if OS.has_feature("mobile") else 13)
 	column.add_child(score_label)
 	_radio_log = RichTextLabel.new()
-	_radio_log.custom_minimum_size = Vector2(180, 42)
+	_radio_log.custom_minimum_size = Vector2(140, 24) if OS.has_feature("mobile") else Vector2(180, 42)
 	_radio_log.fit_content = false
 	_radio_log.scroll_following = true
 	column.add_child(_radio_log)
