@@ -61,8 +61,40 @@ def local_xy(lat, lon):
     z = (CENTER_LAT - lat) * METERS_PER_DEG_LAT * SCALE_Z
     return round(max(-WORLD_LIMIT, min(WORLD_LIMIT, x)), 2), round(max(-WORLD_LIMIT, min(WORLD_LIMIT, z)), 2)
 
+def load_cached_map():
+    """Reuse a previously generated, validated OSM map when Overpass is unavailable."""
+    if not os.path.isfile(OUT_PATH):
+        return None
+    try:
+        with open(OUT_PATH, encoding="utf-8") as cached_file:
+            cached = json.load(cached_file)
+        if (
+            cached.get("source") == "OpenStreetMap contributors"
+            and len(cached.get("roads", [])) >= 20
+            and len(cached.get("buildings", [])) >= 20
+        ):
+            return cached
+    except (OSError, ValueError, TypeError):
+        return None
+    return None
+
+
 def main():
-    data = request_map()
+    try:
+        data = request_map()
+    except Exception as exc:
+        cached = load_cached_map()
+        if cached is None:
+            raise
+        print(
+            "WARNING: Overpass is unavailable; keeping the existing validated "
+            f"Tampa OSM map ({len(cached['roads'])} roads, "
+            f"{len(cached['buildings'])} buildings). Details: {exc}",
+            file=sys.stderr,
+            flush=True,
+        )
+        return
+
     nodes = {el["id"]: (el["lat"], el["lon"]) for el in data.get("elements", []) if el.get("type") == "node"}
     roads = []
     buildings = []
