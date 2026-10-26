@@ -4,7 +4,7 @@ class MinimapControl extends Control:
 	var player_world_position := Vector3.ZERO
 	var target_world_position := Vector3.ZERO
 	var target_active := false
-	var world_limit := 220.0
+	var world_limit := 400.0
 
 	func _draw() -> void:
 		var area := Rect2(Vector2.ZERO, size)
@@ -36,7 +36,7 @@ class MinimapControl extends Control:
 # Fire Department Simulator — open-world emergency response prototype for Android and Windows.
 # No external assets are required; missing officer models are replaced by generated characters.
 
-const WORLD_LIMIT := 220.0
+const WORLD_LIMIT := 400.0
 # Earth2Road exports a complete Godot scene plus its dependent resources.
 # Place the exported scene and its resource folders under assets/earth2road/tampa/.
 const EARTH2ROAD_SCENE_CANDIDATES := [
@@ -118,6 +118,8 @@ var look_touch_id := -1
 var last_touch_position := Vector2.ZERO
 var npc_nodes: Array[Node3D] = []
 var npc_targets: Array[Vector3] = []
+# Lightweight ambient traffic follows real road polylines from the Tampa OSM map.
+var city_traffic: Array[Dictionary] = []
 var rng := RandomNumberGenerator.new()
 var remote_players: Dictionary = {}
 var network_send_timer := 0.0
@@ -228,6 +230,7 @@ func _process(delta: float) -> void:
 	if not game_active:
 		return
 	_update_npcs(delta)
+	_update_city_traffic(delta)
 	_update_remote_network(delta)
 	_update_fire_response(delta)
 	_update_fire_visuals(delta)
@@ -857,8 +860,143 @@ func _create_osm_city_map() -> bool:
 				_box("Tampa_OSM_Building_Fallback", target_size, Vector3(x, height * 0.5, z), Color(0.45, 0.49, 0.51), true)
 		building_count += 1
 
-	print("F.D.F.R. real map loaded: Downtown Tampa, ", road_count, " road segments, ", building_count, " buildings.")
+	_create_osm_street_lights(roads)
+	_create_city_traffic(roads)
+	print("F.D.F.R. real map loaded: Downtown Tampa, ", road_count, " road segments, ", building_count, " buildings, ", city_traffic.size(), " traffic vehicles.")
 	return true
+
+
+func _create_city_traffic(roads: Array) -> void:
+	city_traffic.clear()
+	var candidates: Array[Dictionary] = []
+	for road_variant in roads:
+		if not road_variant is Dictionary:
+			continue
+		var road: Dictionary = road_variant
+		var points: Array = road.get("points", [])
+		if points.size() < 5 or float(road.get("width", 4.0)) < 4.0:
+			continue
+		var kind := str(road.get("kind", ""))
+		if kind == "service" or kind == "footway" or kind == "path":
+			continue
+		var total_length := 0.0
+		for i in range(1, points.size()):
+			var a: Array = points[i - 1]
+			var b: Array = points[i]
+			if a.size() >= 2 and b.size() >= 2:
+				total_length += Vector2(float(b[0]) - float(a[0]), float(b[1]) - float(a[1])).length()
+		if total_length >= 90.0:
+			candidates.append({"road": road, "length": total_length})
+	if candidates.is_empty():
+		push_warning("No se encontraron calles suficientemente largas para el tráfico ambiental.")
+		return
+
+	var vehicle_count := mini(5, candidates.size())
+	for vehicle_index in range(vehicle_count):
+		var candidate_index := int(round(float(vehicle_index) * float(candidates.size() - 1) / float(maxi(1, vehicle_count - 1))))
+		var road: Dictionary = candidates[candidate_index]["road"]
+		var source_points: Array = road.get("points", [])
+		var route: Array[Vector3] = []
+		var lane_offset := 0.95 if vehicle_index % 2 == 0 else -0.95
+		for point_index in range(source_points.size()):
+			var point_data: Array = source_points[point_index]
+			if point_data.size() < 2:
+				continue
+			var previous_data: Array = source_points[maxi(0, point_index - 1)]
+			var next_data: Array = source_points[mini(source_points.size() - 1, point_index + 1)]
+			var previous_point := Vector2(float(previous_data[0]), float(previous_data[1]))
+			var next_point := Vector2(float(next_data[0]), float(next_data[1]))
+			var tangent := (next_point - previous_point).normalized()
+			var side := Vector2(tangent.y, -tangent.x) * lane_offset
+			route.append(Vector3(float(point_data[0]) + side.x, 0.04, float(point_data[1]) + side.y))
+		if route.size() < 2:
+			continue
+		var traffic_node := Node3D.new()
+		traffic_node.name = "AmbientTraffic_%02d" % vehicle_index
+		traffic_node.position = route[0]
+		game_world.add_child(traffic_node)
+		var model_path := "res://assets/vehicles/sedan.glb" if vehicle_index % 3 != 2 else "res://assets/vehicles/suv.glb"
+		var packed_model := load(model_path) as PackedScene
+		if packed_model == null:
+			traffic_node.queue_free()
+			continue
+		var model := packed_model.instantiate() as Node3D
+		if model == null:
+			traffic_node.queue_free()
+			continue
+		model.name = "TrafficVehicleModel"
+		traffic_node.add_child(model)
+		_fit_imported_model(model, Vector3(1.95, 1.55, 4.25))
+		var first_target: Vector3 = route[1]
+		traffic_node.rotation.y = atan2(first_target.x - route[0].x, first_target.z - route[0].z)
+		city_traffic.append({
+			"node": traffic_node,
+			"route": route,
+			"route_index": 1,
+			"direction": 1,
+			"speed": 4.0 + float(vehicle_index % 3) * 1.1
+		})
+
+
+func _update_city_traffic(delta: float) -> void:
+	for traffic_variant in city_traffic:
+		if not traffic_variant is Dictionary:
+			continue
+		var traffic: Dictionary = traffic_variant
+		var node := traffic.get("node") as Node3D
+		var route: Array = traffic.get("route", [])
+		if not is_instance_valid(node) or route.size() < 2:
+			continue
+		var route_index := clampi(int(traffic.get("route_index", 1)), 0, route.size() - 1)
+		var direction := int(traffic.get("direction", 1))
+		var target: Vector3 = route[route_index]
+		var offset := target - node.position
+		offset.y = 0.0
+		var step := float(traffic.get("speed", 4.5)) * delta
+		if offset.length() <= step + 0.2:
+			node.position.x = target.x
+			node.position.z = target.z
+			route_index += direction
+			if route_index >= route.size():
+				direction = -1
+				route_index = route.size() - 2
+			elif route_index < 0:
+				direction = 1
+				route_index = 1
+			traffic["route_index"] = route_index
+			traffic["direction"] = direction
+			target = route[route_index]
+			offset = target - node.position
+			offset.y = 0.0
+		if offset.length() > 0.05:
+			node.position += offset.normalized() * minf(step, offset.length())
+			node.rotation.y = atan2(offset.x, offset.z)
+
+
+func _create_osm_street_lights(roads: Array) -> void:
+	var placed := 0
+	for road_variant in roads:
+		if placed >= 16:
+			break
+		if not road_variant is Dictionary:
+			continue
+		var road: Dictionary = road_variant
+		var points: Array = road.get("points", [])
+		if points.size() < 9 or float(road.get("width", 4.0)) < 4.0:
+			continue
+		for sample_fraction in [0.33, 0.67]:
+			if placed >= 16:
+				break
+			var point_index := clampi(int(float(points.size() - 1) * sample_fraction), 0, points.size() - 1)
+			var point_data: Array = points[point_index]
+			var previous_data: Array = points[maxi(0, point_index - 1)]
+			var next_data: Array = points[mini(points.size() - 1, point_index + 1)]
+			if point_data.size() < 2 or previous_data.size() < 2 or next_data.size() < 2:
+				continue
+			var tangent := (Vector2(float(next_data[0]), float(next_data[1])) - Vector2(float(previous_data[0]), float(previous_data[1]))).normalized()
+			var side := Vector2(tangent.y, -tangent.x) * (float(road.get("width", 4.0)) * 0.5 + 2.0)
+			_place_road_model("light-curved.glb", Vector3(float(point_data[0]) + side.x, 0.0, float(point_data[1]) + side.y))
+			placed += 1
 
 
 func _create_osm_footprint_building(footprint_data: Array, height: float, kind: String, building_index: int) -> void:
