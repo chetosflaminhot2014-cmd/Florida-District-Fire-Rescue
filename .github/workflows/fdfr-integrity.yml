@@ -1,0 +1,28 @@
+name: F.D.F.R. Project Integrity
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  integrity:
+    name: Validate project resources (Python + Node.js)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate Godot project and required scene resources
+        run: python tools/validation/validate_project.py
+      - name: Validate project metadata with Node.js
+        run: node tools/validation/validate_project.js
