@@ -601,20 +601,30 @@ func _create_menu() -> void:
 
 	# Keep the logo, actions and touch targets readable on a phone.
 	if OS.has_feature("mobile") or get_viewport().get_visible_rect().size.x < 760:
-		scene_tint.visible = false
+		# Mobile gets a distinct left-side command rail, rather than the old centered menu.
+		scene_tint.visible = true
+		scene_tint.anchor_left = 0.0
+		scene_tint.anchor_right = 0.43
+		scene_tint.color = Color(0.008, 0.016, 0.026, 0.72)
 		right_panel.visible = false
-		footer.visible = false
-		brand.anchor_left = 0.07
-		brand.anchor_right = 0.93
-		brand.anchor_top = 0.055
-		brand.anchor_bottom = 0.27
-		brand_title.add_theme_font_size_override("font_size", 43)
-		brand_subtitle.add_theme_font_size_override("font_size", 12)
-		left_area.anchor_left = 0.07
-		left_area.anchor_right = 0.93
-		left_area.anchor_top = 0.31
-		left_area.anchor_bottom = 0.94
-		menu_panel.add_theme_constant_override("separation", 10)
+		footer.visible = true
+		footer.anchor_left = 0.035
+		footer.anchor_right = 0.40
+		footer.anchor_top = 0.91
+		footer.anchor_bottom = 0.97
+		footer.text = "SERVIR  •  PROTEGER  •  SALVAR"
+		footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		brand.anchor_left = 0.045
+		brand.anchor_right = 0.41
+		brand.anchor_top = 0.045
+		brand.anchor_bottom = 0.245
+		brand_title.add_theme_font_size_override("font_size", 40)
+		brand_subtitle.add_theme_font_size_override("font_size", 11)
+		left_area.anchor_left = 0.035
+		left_area.anchor_right = 0.405
+		left_area.anchor_top = 0.29
+		left_area.anchor_bottom = 0.84
+		menu_panel.add_theme_constant_override("separation", 9)
 	_show_main_menu()
 
 func _clear_menu() -> void:
