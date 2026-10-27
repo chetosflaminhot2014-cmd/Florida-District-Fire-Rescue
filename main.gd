@@ -410,9 +410,9 @@ func _create_menu_scene_preview() -> void:
 	var camera := Camera3D.new()
 	camera.name = "MenuCamera"
 	camera.fov = 52.0
-	camera.position = Vector3(14.5, 8.5, 18.0)
+	camera.position = Vector3(18.0, 9.5, 21.0)
 	preview.add_child(camera)
-	camera.look_at(Vector3(0.0, 2.0, -9.0), Vector3.UP)
+	camera.look_at(Vector3(0.5, 1.8, -8.0), Vector3.UP)
 	camera.current = true
 
 
@@ -447,11 +447,11 @@ func _create_menu() -> void:
 
 	var scene_tint := ColorRect.new()
 	scene_tint.name = "SceneTint"
-	scene_tint.anchor_left = 0.34
-	scene_tint.anchor_right = 1.0
+	scene_tint.anchor_left = 0.0
+	scene_tint.anchor_right = 0.38
 	scene_tint.anchor_top = 0.0
 	scene_tint.anchor_bottom = 1.0
-	scene_tint.color = Color(0.075, 0.025, 0.025, 0.42)
+	scene_tint.color = Color(0.012, 0.022, 0.034, 0.52)
 	scene_tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu_layer.add_child(scene_tint)
 
@@ -468,9 +468,9 @@ func _create_menu() -> void:
 	var brand := VBoxContainer.new()
 	brand.name = "BrandHeader"
 	brand.anchor_left = 0.055
-	brand.anchor_right = 0.44
-	brand.anchor_top = 0.075
-	brand.anchor_bottom = 0.29
+	brand.anchor_right = 0.34
+	brand.anchor_top = 0.055
+	brand.anchor_bottom = 0.245
 	brand.add_theme_constant_override("separation", 3)
 	menu_layer.add_child(brand)
 
@@ -501,19 +501,19 @@ func _create_menu() -> void:
 
 	var right_panel := PanelContainer.new()
 	right_panel.name = "OperationsPanel"
-	right_panel.anchor_left = 0.53
-	right_panel.anchor_right = 0.945
-	right_panel.anchor_top = 0.115
-	right_panel.anchor_bottom = 0.85
+	right_panel.anchor_left = 0.035
+	right_panel.anchor_right = 0.355
+	right_panel.anchor_top = 0.285
+	right_panel.anchor_bottom = 0.875
 	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.025, 0.034, 0.047, 0.96)
-	panel_style.border_color = Color(0.32, 0.12, 0.11, 0.95)
+	panel_style.bg_color = Color(0.012, 0.022, 0.034, 0.94)
+	panel_style.border_color = Color(0.88, 0.13, 0.09, 0.85)
 	panel_style.set_border_width_all(1)
-	panel_style.set_corner_radius_all(7)
-	panel_style.content_margin_left = 26
-	panel_style.content_margin_right = 26
-	panel_style.content_margin_top = 26
-	panel_style.content_margin_bottom = 26
+	panel_style.set_corner_radius_all(3)
+	panel_style.content_margin_left = 20
+	panel_style.content_margin_right = 20
+	panel_style.content_margin_top = 20
+	panel_style.content_margin_bottom = 20
 	right_panel.add_theme_stylebox_override("panel", panel_style)
 	menu_layer.add_child(right_panel)
 
@@ -528,8 +528,8 @@ func _create_menu() -> void:
 	info.add_child(status)
 
 	var scene_title := Label.new()
-	scene_title.text = "CUANDO LLEGA\nLA LLAMADA."
-	scene_title.add_theme_font_size_override("font_size", 36)
+	scene_title.text = "LISTOS PARA\nLA EMERGENCIA."
+	scene_title.add_theme_font_size_override("font_size", 30)
 	scene_title.add_theme_color_override("font_color", Color(0.98, 0.97, 0.94))
 	info.add_child(scene_title)
 
@@ -539,9 +539,9 @@ func _create_menu() -> void:
 	info.add_child(divider)
 
 	var description := Label.new()
-	description.text = "Responde en todo el distrito. Protege a la comunidad. Regresa con tu equipo."
+	description.text = "Cada llamada cuenta. Despacha tu unidad, responde al incidente y protege a la comunidad."
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	description.add_theme_font_size_override("font_size", 16)
+	description.add_theme_font_size_override("font_size", 14)
 	description.add_theme_color_override("font_color", Color(0.76, 0.80, 0.84))
 	info.add_child(description)
 
@@ -572,11 +572,11 @@ func _create_menu() -> void:
 
 	var footer := Label.new()
 	footer.name = "MenuFooter"
-	footer.anchor_left = 0.53
-	footer.anchor_right = 0.945
+	footer.anchor_left = 0.035
+	footer.anchor_right = 0.355
 	footer.anchor_top = 0.89
 	footer.anchor_bottom = 0.95
-	footer.text = "F.D.F.R.  /  FLORIDA DISTRICT FIRE & RESCUE"
+	footer.text = "F.D.F.R.  /  SERVICIO ACTIVO 24/7"
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	footer.add_theme_font_size_override("font_size", 10)
 	footer.add_theme_color_override("font_color", Color(0.62, 0.66, 0.70))
@@ -584,10 +584,10 @@ func _create_menu() -> void:
 
 	var left_area := Control.new()
 	left_area.name = "MenuNavigation"
-	left_area.anchor_left = 0.055
-	left_area.anchor_right = 0.44
-	left_area.anchor_top = 0.34
-	left_area.anchor_bottom = 0.89
+	left_area.anchor_left = 0.65
+	left_area.anchor_right = 0.94
+	left_area.anchor_top = 0.35
+	left_area.anchor_bottom = 0.84
 	menu_layer.add_child(left_area)
 
 	var left_center := CenterContainer.new()
