@@ -448,7 +448,7 @@ func _create_menu() -> void:
 	var scene_tint := ColorRect.new()
 	scene_tint.name = "SceneTint"
 	scene_tint.anchor_left = 0.0
-	scene_tint.anchor_right = 0.38
+	scene_tint.anchor_right = 0.30
 	scene_tint.anchor_top = 0.0
 	scene_tint.anchor_bottom = 1.0
 	scene_tint.color = Color(0.012, 0.022, 0.034, 0.52)
@@ -467,10 +467,10 @@ func _create_menu() -> void:
 
 	var brand := VBoxContainer.new()
 	brand.name = "BrandHeader"
-	brand.anchor_left = 0.055
+	brand.anchor_left = 0.035
 	brand.anchor_right = 0.34
-	brand.anchor_top = 0.055
-	brand.anchor_bottom = 0.245
+	brand.anchor_top = 0.035
+	brand.anchor_bottom = 0.235
 	brand.add_theme_constant_override("separation", 3)
 	menu_layer.add_child(brand)
 
@@ -483,7 +483,7 @@ func _create_menu() -> void:
 
 	var brand_title := Label.new()
 	brand_title.text = "F.D.F.R."
-	brand_title.add_theme_font_size_override("font_size", 52)
+	brand_title.add_theme_font_size_override("font_size", 46)
 	brand_title.add_theme_color_override("font_color", Color(0.98, 0.97, 0.94))
 	brand.add_child(brand_title)
 
@@ -502,7 +502,7 @@ func _create_menu() -> void:
 	var right_panel := PanelContainer.new()
 	right_panel.name = "OperationsPanel"
 	right_panel.anchor_left = 0.035
-	right_panel.anchor_right = 0.355
+	right_panel.anchor_right = 0.31
 	right_panel.anchor_top = 0.285
 	right_panel.anchor_bottom = 0.875
 	var panel_style := StyleBoxFlat.new()
@@ -584,10 +584,10 @@ func _create_menu() -> void:
 
 	var left_area := Control.new()
 	left_area.name = "MenuNavigation"
-	left_area.anchor_left = 0.65
-	left_area.anchor_right = 0.94
-	left_area.anchor_top = 0.35
-	left_area.anchor_bottom = 0.84
+	left_area.anchor_left = 0.025
+	left_area.anchor_right = 0.285
+	left_area.anchor_top = 0.285
+	left_area.anchor_bottom = 0.77
 	menu_layer.add_child(left_area)
 
 	var left_center := CenterContainer.new()
