@@ -321,7 +321,7 @@ func _create_menu_scene_preview() -> void:
 			var z := -14.0 - float(i) * 12.0
 			var height := 5.0 + float((i * 3) % 5)
 			var width := 7.0 + float(i % 3) * 1.8
-			var x := side * (15.0 + float(i % 2) * 2.0)
+			var x: float = side * (15.0 + float(i % 2) * 2.0)
 			_menu_preview_box(preview, "FloridaShop", Vector3(width, height, 8.5), Vector3(x, height * 0.5, z), shop_colors[i])
 			_menu_preview_box(preview, "ShopRoofTrim", Vector3(width + 0.2, 0.22, 8.7), Vector3(x, height + 0.08, z), Color(0.16, 0.20, 0.22))
 			_menu_preview_box(preview, "ShopWindowBand", Vector3(width * 0.78, 1.25, 0.09), Vector3(x, 1.75, z + 4.3), Color(0.10, 0.23, 0.29))
@@ -333,7 +333,7 @@ func _create_menu_scene_preview() -> void:
 	for side in [-1.0, 1.0]:
 		for i in range(5):
 			var tree_z := 5.0 - float(i) * 14.0
-			var tree_x := side * (12.4 + float(i % 2) * 1.2)
+			var tree_x: float = side * (12.4 + float(i % 2) * 1.2)
 			var trunk := MeshInstance3D.new()
 			trunk.name = "FloridaPalmTrunk"
 			var trunk_mesh := CylinderMesh.new()
