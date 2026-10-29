@@ -1,34 +1,40 @@
 # F.D.F.R. — Florida District Fire & Rescue
 
-A lightweight Godot 4 project for Windows PC and Android, set in the fictional Florida District, an original fire-and-rescue setting.
+**Versión de desarrollo:** 0.1.2 Alpha  
+**Motor:** Godot 4.7.2  
+**Plataformas objetivo:** Windows PC y Android
 
-## Current playable prototype
+F.D.F.R. es un prototipo jugable de simulación de bomberos y rescate ambientado en una ciudad ficticia inspirada en Florida. El proyecto está en desarrollo; esta versión no representa un simulador terminado.
 
-- Procedural role-based NPCs: civilians, sheriff/police, EMS and firefighters.
-- A fictional 911 call and department radio panel, with incident acceptance and a location marker.
-- Multiplayer foundation: host/join menu, up to 8 peers, player-position synchronization and shared dispatch messages. Initial testing is intended for LAN; internet hosting requires reachable UDP port 7000 or a dedicated server.
+## Lo que incluye el prototipo
 
-- Main menu, character selection, settings and credits.
-- Procedurally generated city blocks, a road grid, sidewalks, lane markings, a police station and trees.
-- Third-person officer movement and camera control.
-- Civilian NPCs that wander around the city.
-- A simple patrol vehicle that can be entered/exited and driven.
-- On-screen movement, run and vehicle buttons for touch devices.
-- Keyboard controls for PC: WASD/arrows to move, Shift to run, E to enter/exit the fire engine, mouse to look, Esc to release/capture the mouse.
-- Low-detail procedural geometry and Godot's Compatibility renderer to target modest hardware.
+- Menú principal de F.D.F.R. con vista 3D de fondo.
+- Ciudad generada por procedimientos y trabajo de importación de edificios, carreteras y vehículos.
+- Movimiento en tercera persona y controles táctiles para dispositivos móviles.
+- Vehículo de emergencia conducible y cambio entre cámara exterior e interior.
+- Sistema inicial de llamadas 911, panel de radio y opciones de respuesta.
+- Marcador de ubicación de incidente y mensajes de despacho.
+- Base de multijugador para crear o unirse a una sesión, con sincronización inicial de jugadores.
+- Ajustes de calidad gráfica según la plataforma.
 
-## Build downloads
+## Controles de referencia
 
-GitHub Actions workflow **Build Fire Department Simulator (PC + Android)** exports:
-- `FireDepartmentSimulator.exe` for Windows x86_64, artifact `FDFR-Windows-PC`.
-- `FDFR.apk` for Android arm64, artifact `FDFR-Android-APK`.
+- **PC:** WASD o flechas para moverse; Shift para correr; E para entrar o salir del vehículo; ratón para mirar; Esc para liberar o capturar el ratón; V para cambiar la cámara.
+- **Android:** usa los controles en pantalla. La disposición puede cambiar mientras se ajusta la interfaz.
 
-Open the repository's **Actions** tab and select the latest successful run. Download the Windows and Android artifacts separately.
+## Descargar y ejecutar en Windows
 
-## Important scope note
+1. Abre la pestaña **Actions** del repositorio.
+2. Entra en la ejecución más reciente de **Build F.D.F.R. (Windows + Android)** que haya terminado correctamente.
+3. Descarga el artefacto **FDFR-Windows-PC-Alpha** y extrae el ZIP si el navegador lo descarga comprimido.
+4. Ejecuta `FDFR-Windows-Alpha.exe`.
 
-This is an early playable prototype, not a finished commercial simulator. The repository did not contain the officer `.glb` models mentioned in earlier development, so the current build uses generated placeholder characters and a primitive fire engine. NPCs use lightweight wandering behavior. The 911/radio loop and multiplayer are an early foundation and still need end-to-end testing on two devices; the prototype does not yet have full emergency response AI, traffic systems, arrest/citation mechanics, imported rigged character animations, sound, saves or production-quality vehicle physics.
+Para Android, descarga el artefacto **FDFR-Android-Alpha-APK** e instala el APK en un dispositivo compatible.
 
-## Engine
+## Estado y limitaciones conocidas
 
-Godot 4.7.2 stable. Project scripts and export presets are maintained in this repository.
+Esta es una **Alpha temprana**. Las llamadas 911, la radio, la conducción, el mapa y el multijugador siguen necesitando pruebas completas en juego y entre varios dispositivos. Algunos personajes y elementos del mundo todavía son provisionales; no todas las animaciones, sonidos, físicas de vehículos ni comportamientos de emergencia están implementados. No se debe asumir que una función está terminada solo porque aparece en la interfaz.
+
+## Desarrollo
+
+Los cambios se mantienen en la rama `main`. GitHub Actions importa recursos, comprueba la carga del proyecto con Godot y genera artefactos de Windows y Android. Una ejecución correcta confirma que el proyecto pasó las comprobaciones automatizadas de esa compilación; no sustituye todas las pruebas manuales dentro del juego.
