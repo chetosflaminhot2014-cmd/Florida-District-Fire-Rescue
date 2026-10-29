@@ -1,4 +1,4 @@
-name: Build Fire Department Simulator (Windows + Android)
+name: Build F.D.F.R. (Windows + Android)
 
 on:
   workflow_dispatch:
@@ -187,11 +187,11 @@ jobs:
       - name: Export Windows build
         run: |
           mkdir -p build
-          "$GODOT_BIN" --headless --path . --export-debug "Windows Desktop" build/FireDepartmentSimulator.exe
+          "$GODOT_BIN" --headless --path . --export-debug "Windows Desktop" build/FDFR-Windows-Alpha.exe
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
         with:
-          name: FireDepartmentSimulator-Windows-PC
+          name: FDFR-Windows-PC-Alpha
           path: build/FireDepartmentSimulator.exe
           if-no-files-found: error
           retention-days: 14
@@ -251,11 +251,11 @@ jobs:
       - name: Export Android APK
         run: |
           mkdir -p build
-          "$GODOT_BIN" --headless --path . --export-debug "Android" build/FireDepartmentSimulator.apk
+          "$GODOT_BIN" --headless --path . --export-debug "Android" build/FDFR-Android-Alpha.apk
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
-          name: FireDepartmentSimulator-Android-APK
+          name: FDFR-Android-Alpha-APK
           path: build/FireDepartmentSimulator.apk
           if-no-files-found: error
           retention-days: 14
