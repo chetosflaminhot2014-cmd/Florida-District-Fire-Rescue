@@ -192,7 +192,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FDFR-Windows-PC-Alpha
-          path: build/FireDepartmentSimulator.exe
+          path: build/FDFR-Windows-Alpha.exe
           if-no-files-found: error
           retention-days: 14
 
@@ -256,6 +256,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FDFR-Android-Alpha-APK
-          path: build/FireDepartmentSimulator.apk
+          path: build/FDFR-Android-Alpha.apk
           if-no-files-found: error
           retention-days: 14
