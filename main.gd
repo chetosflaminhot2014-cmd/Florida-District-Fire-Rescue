@@ -576,7 +576,7 @@ func _create_menu() -> void:
 	footer.anchor_right = 0.355
 	footer.anchor_top = 0.89
 	footer.anchor_bottom = 0.95
-	footer.text = "F.D.F.R.  /  SERVICIO ACTIVO 24/7"
+	footer.text = "F.D.F.R.  /  ALPHA 0.1.2  /  SERVICIO ACTIVO 24/7"
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	footer.add_theme_font_size_override("font_size", 10)
 	footer.add_theme_color_override("font_color", Color(0.62, 0.66, 0.70))
