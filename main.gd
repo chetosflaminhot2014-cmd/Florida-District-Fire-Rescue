@@ -115,6 +115,8 @@ var player_animation_names: Array[StringName] = []
 var player_motion_state := ""
 var hud_layer: CanvasLayer
 var status_label: Label
+var status_override_timer := 0.0
+var career_distance_buffer := 0.0
 var wanted_label: Label
 var wanted_system: Node
 var police_patrol: Node3D
@@ -271,13 +273,20 @@ func _process(delta: float) -> void:
 	_update_fire_response(delta)
 	_update_fire_visuals(delta)
 	_update_dispatch_arrival()
+	if driving and has_node("/root/CareerSystem"):
+		career_distance_buffer += absf(vehicle_speed) * delta / 1000.0
+		if career_distance_buffer >= 0.01:
+			CareerSystem.record_stat("distance_km", career_distance_buffer)
+			career_distance_buffer = 0.0
+	if status_override_timer > 0.0:
+		status_override_timer = maxf(0.0, status_override_timer - delta)
 	if is_instance_valid(minimap):
 		var tracked_position := vehicle.global_position if driving and is_instance_valid(vehicle) else (player.global_position if is_instance_valid(player) else Vector3.ZERO)
 		minimap.player_world_position = tracked_position
 		minimap.target_world_position = dispatch_target_position
 		minimap.target_active = dispatch_target_active
 		minimap.queue_redraw()
-	if is_instance_valid(status_label):
+	if is_instance_valid(status_label) and status_override_timer <= 0.0:
 		if driving:
 			var speed_kmh := roundi(absf(vehicle_speed) * 3.6)
 			var gear := "R" if vehicle_speed < -0.2 else "D"
@@ -1576,7 +1585,13 @@ func _try_refill_water() -> void:
 		if is_instance_valid(status_label):
 			status_label.text = "RECARGAR AGUA · REGRESA A ESTACIÓN 01"
 		return
+	if water_level >= 99.9:
+		if is_instance_valid(status_label):
+			status_label.text = "TANQUE DE AGUA YA ESTÁ LLENO"
+		return
 	water_level = 100.0
+	if has_node("/root/CareerSystem"):
+		CareerSystem.record_stat("water_refills", 1)
 	if is_instance_valid(status_label):
 		status_label.text = "TANQUE DE AGUA LLENO · 100%"
 
@@ -1596,7 +1611,13 @@ func _try_repair_vehicle() -> void:
 		if is_instance_valid(status_label):
 			status_label.text = "REPARACIÓN · DEBES ESTAR EN ESTACIÓN 01"
 		return
+	if vehicle_health >= 99.9:
+		if is_instance_valid(status_label):
+			status_label.text = "EL CAMIÓN NO NECESITA REPARACIONES"
+		return
 	vehicle_health = 100.0
+	if has_node("/root/CareerSystem"):
+		CareerSystem.record_stat("vehicle_repairs", 1)
 	if is_instance_valid(status_label):
 		status_label.text = "MANTENIMIENTO COMPLETADO · CAMIÓN AL 100%"
 
@@ -1613,8 +1634,15 @@ func _try_refuel() -> void:
 	var station_position := Vector3(60.0, 0.0, 115.0)
 	var station_distance := Vector2(vehicle.global_position.x - station_position.x, vehicle.global_position.z - station_position.z).length()
 	if station_distance <= 28.0:
+		var refueled := fuel_level < 99.9
+		var refilled_water := water_level < 99.9
 		fuel_level = 100.0
 		water_level = 100.0
+		if has_node("/root/CareerSystem"):
+			if refueled:
+				CareerSystem.record_stat("refuels", 1)
+			if refilled_water:
+				CareerSystem.record_stat("water_refills", 1)
 		if is_instance_valid(status_label):
 			status_label.text = "ESTACIÓN 01 · COMBUSTIBLE Y AGUA AL 100%"
 		return
@@ -1630,6 +1658,8 @@ func _try_refuel() -> void:
 			status_label.text = "DEPÓSITO LLENO · 100%"
 		return
 	fuel_level = 100.0
+	if has_node("/root/CareerSystem"):
+		CareerSystem.record_stat("refuels", 1)
 	if is_instance_valid(status_label):
 		status_label.text = "REPOSTAJE COMPLETADO · Depósito al 100%"
 
@@ -2419,6 +2449,7 @@ func _on_mission_completed(reward: int, description: String) -> void:
 		career_summary = " · %s · XP %d · $%d" % [CareerSystem.get_rank_title(), CareerSystem.get_xp(), CareerSystem.get_credits()]
 	if is_instance_valid(status_label):
 		status_label.text = "SERVICIO COMPLETADO · %s · +%d créditos%s" % [description, reward, career_summary]
+		status_override_timer = 6.0
 
 func _on_mission_failed(description: String) -> void:
 	if has_node("/root/CareerSystem"):
@@ -2448,6 +2479,7 @@ func _on_mission_failed(description: String) -> void:
 		minimap.queue_redraw()
 	if is_instance_valid(status_label):
 		status_label.text = "LLAMADA VENCIDA · %s" % description
+		status_override_timer = 5.0
 
 func _toggle_extinguishing() -> void:
 	if not game_active:
