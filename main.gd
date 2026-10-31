@@ -115,6 +115,7 @@ var player_animation_names: Array[StringName] = []
 var player_motion_state := ""
 var hud_layer: CanvasLayer
 var status_label: Label
+var career_label: Label
 var status_override_timer := 0.0
 var career_distance_buffer := 0.0
 var wanted_label: Label
@@ -286,6 +287,8 @@ func _process(delta: float) -> void:
 		minimap.target_world_position = dispatch_target_position
 		minimap.target_active = dispatch_target_active
 		minimap.queue_redraw()
+	if is_instance_valid(career_label) and has_node("/root/CareerSystem"):
+		career_label.text = "%s  ·  XP %d  ·  $%d  ·  LOGROS %d/%d" % [CareerSystem.get_rank_title(), CareerSystem.get_xp(), CareerSystem.get_credits(), CareerSystem.get_achievement_count(), CareerSystem.get_achievement_total()]
 	if is_instance_valid(status_label) and status_override_timer <= 0.0:
 		if driving:
 			var speed_kmh := roundi(absf(vehicle_speed) * 3.6)
@@ -2769,6 +2772,18 @@ func _create_hud() -> void:
 	status_label.add_theme_font_size_override("font_size", 12)
 	top.add_child(status_label)
 
+	career_label = Label.new()
+	career_label.name = "CareerStatus"
+	career_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	career_label.anchor_left = 0.20
+	career_label.anchor_right = 0.80
+	career_label.anchor_top = 0.065
+	career_label.anchor_bottom = 0.065
+	career_label.offset_bottom = 20
+	career_label.add_theme_font_size_override("font_size", 10)
+	career_label.add_theme_color_override("font_color", Color(0.72, 0.88, 0.96))
+	hud_layer.add_child(career_label)
+
 	wanted_label = Label.new()
 	wanted_label.name = "WantedStars"
 	wanted_label.text = "BÚSQUEDA  ☆☆☆☆☆"
@@ -2777,8 +2792,8 @@ func _create_hud() -> void:
 	wanted_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	wanted_label.anchor_left = 0.30
 	wanted_label.anchor_right = 0.70
-	wanted_label.anchor_top = 0.075
-	wanted_label.anchor_bottom = 0.075
+	wanted_label.anchor_top = 0.105
+	wanted_label.anchor_bottom = 0.105
 	wanted_label.offset_top = 0
 	wanted_label.offset_bottom = 30
 	wanted_label.add_theme_font_size_override("font_size", 18)
