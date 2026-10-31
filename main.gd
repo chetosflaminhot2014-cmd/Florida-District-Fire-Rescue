@@ -1650,8 +1650,8 @@ func _try_refuel() -> void:
 			status_label.text = "ESTACIÓN 01 · COMBUSTIBLE Y AGUA AL 100%"
 		return
 	var nearest_distance := INF
-	for station_position in gas_station_positions:
-		nearest_distance = minf(nearest_distance, Vector2(vehicle.global_position.x - station_position.x, vehicle.global_position.z - station_position.z).length())
+	for nearby_station_position in gas_station_positions:
+		nearest_distance = minf(nearest_distance, Vector2(vehicle.global_position.x - nearby_station_position.x, vehicle.global_position.z - nearby_station_position.z).length())
 	if nearest_distance > 17.0:
 		if is_instance_valid(status_label):
 			status_label.text = "REPOSTAR · Acércate a una gasolinera señalizada"
