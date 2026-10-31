@@ -828,6 +828,11 @@ func _start_game(female: bool) -> void:
 	if game_active:
 		return
 	game_active = true
+	if has_node("/root/CareerSystem"):
+		CareerSystem.start_shift()
+	var menu_preview := get_node_or_null("MenuScenePreview")
+	if is_instance_valid(menu_preview):
+		menu_preview.queue_free()
 	menu_layer.visible = false
 	game_world = Node3D.new()
 	game_world.name = "GameWorld"
@@ -1543,6 +1548,9 @@ func _apply_vehicle_collision_damage() -> void:
 	var impact_speed := absf(vehicle_speed)
 	var damage := clampf((impact_speed - 5.0) * 1.25, 2.0, 22.0)
 	vehicle_health = maxf(0.0, vehicle_health - damage)
+	if has_node("/root/CareerSystem"):
+		CareerSystem.record_stat("vehicle_collisions", 1)
+		CareerSystem.record_stat("vehicle_damage_events", 1)
 	vehicle_speed *= 0.45
 	vehicle_collision_cooldown = 1.0
 	if vehicle_health <= 0.0:
@@ -2405,10 +2413,16 @@ func _update_dispatch_arrival() -> void:
 		dispatch_layer.call("complete_arrival_mission")
 
 func _on_mission_completed(reward: int, description: String) -> void:
+	var career_summary := ""
+	if has_node("/root/CareerSystem"):
+		CareerSystem.complete_mission(reward, description)
+		career_summary = " · %s · XP %d · $%d" % [CareerSystem.get_rank_title(), CareerSystem.get_xp(), CareerSystem.get_credits()]
 	if is_instance_valid(status_label):
-		status_label.text = "SERVICIO COMPLETADO · %s · +%d créditos" % [description, reward]
+		status_label.text = "SERVICIO COMPLETADO · %s · +%d créditos%s" % [description, reward, career_summary]
 
 func _on_mission_failed(description: String) -> void:
+	if has_node("/root/CareerSystem"):
+		CareerSystem.record_failed_call()
 	dispatch_target_active = false
 	dispatch_is_fire_call = false
 	rescue_victim_active = false
@@ -2423,6 +2437,9 @@ func _on_mission_failed(description: String) -> void:
 		if is_instance_valid(fire_visual):
 			fire_visual.queue_free()
 			fire_visual = null
+		fire_flames.clear()
+		fire_spread_patches.clear()
+		fire_strength = 100.0
 	if is_instance_valid(dispatch_marker):
 		dispatch_marker.queue_free()
 		dispatch_marker = null
