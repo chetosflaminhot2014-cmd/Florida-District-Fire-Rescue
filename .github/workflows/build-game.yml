@@ -63,6 +63,10 @@ jobs:
             curl -L --fail --retry 3 "$COMMERCIAL_BASE/building-skyscraper-$type.glb" -o "$COMMERCIAL_DIR/building-skyscraper-$type.glb"
           done
           curl -L --fail --retry 3 "$COMMERCIAL_BASE/Textures/colormap.png" -o "$COMMERCIAL_DIR/Textures/colormap.png"
+          # The road GLBs reference this relative texture path; provide the shared CC0 atlas there.
+          ROAD_TEXTURE_DIR="$ROAD_DIR/kenney_city_roads_glb_cc0_v1/models_glb/Textures"
+          mkdir -p "$ROAD_TEXTURE_DIR"
+          cp "$ASSET_DIR/Textures/colormap.png" "$ROAD_TEXTURE_DIR/colormap.png"
           cat > "$ASSET_DIR/ASSET_LICENSES.md" <<'EOF'
           # Florida City Models — Asset Record
 
