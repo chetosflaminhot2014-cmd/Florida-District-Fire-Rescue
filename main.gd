@@ -4,12 +4,19 @@ class MinimapControl extends Control:
 	var player_world_position := Vector3.ZERO
 	var target_world_position := Vector3.ZERO
 	var target_active := false
+	var wanted_level := 0
+	var alert_phase := false
 	var world_limit := 400.0
 
 	func _draw() -> void:
 		var area := Rect2(Vector2.ZERO, size)
-		draw_rect(area, Color(0.025, 0.055, 0.075, 0.94), true)
-		draw_rect(area, Color(0.25, 0.68, 0.85, 0.95), false, 2.0)
+		var map_background := Color(0.025, 0.055, 0.075, 0.94)
+		var map_border := Color(0.25, 0.68, 0.85, 0.95)
+		if wanted_level > 0:
+			map_background = Color(0.19, 0.025, 0.035, 0.96) if alert_phase else Color(0.025, 0.045, 0.19, 0.96)
+			map_border = Color(1.0, 0.12, 0.16, 0.98) if alert_phase else Color(0.12, 0.38, 1.0, 0.98)
+		draw_rect(area, map_background, true)
+		draw_rect(area, map_border, false, 2.0)
 		var pad := 12.0
 		var map_size := size - Vector2(pad * 2.0, pad * 2.0)
 		for i in range(1, 6):
@@ -108,7 +115,11 @@ var player_animation_names: Array[StringName] = []
 var player_motion_state := ""
 var hud_layer: CanvasLayer
 var status_label: Label
+var wanted_label: Label
+var wanted_system: Node
+var police_patrol: Node3D
 var minimap: MinimapControl
+var pedestrian_collision_cooldown := 0.0
 var dispatch_target_position := Vector3.ZERO
 var dispatch_target_active := false
 var game_active := false
@@ -246,6 +257,7 @@ func _process(delta: float) -> void:
 	if not game_active:
 		return
 	_update_npcs(delta)
+	_update_wanted_system(delta)
 	_update_city_traffic(delta)
 	_update_remote_network(delta)
 	_update_fire_response(delta)
@@ -817,6 +829,8 @@ func _start_game(female: bool) -> void:
 	_create_vehicle()
 	_create_service_vehicles()
 	_create_npcs(10 if OS.has_feature("mobile") else 14)
+	_create_police_pursuit_vehicle()
+	_create_wanted_system()
 	_create_hud()
 	_create_dispatch_system()
 	for peer_id in MultiplayerLobby.remote_states.keys():
@@ -2061,6 +2075,139 @@ func _update_npcs(delta: float) -> void:
 		npc.position += direction * delta * 1.0
 		npc.rotation.y = atan2(direction.x, direction.z)
 
+
+func _create_wanted_system() -> void:
+	var wanted_script := load("res://wanted_system.gd")
+	if wanted_script == null:
+		push_error("No se pudo cargar wanted_system.gd")
+		return
+	wanted_system = wanted_script.new()
+	wanted_system.name = "WantedSystem"
+	add_child(wanted_system)
+	wanted_system.wanted_level_changed.connect(_on_wanted_level_changed)
+
+func _on_wanted_level_changed(stars: int, charge_count: int) -> void:
+	if is_instance_valid(wanted_label):
+		var display := ""
+		for i in range(5):
+			display += "★" if i < stars else "☆"
+		wanted_label.text = "BÚSQUEDA  " + display + "  ·  CARGOS: " + str(charge_count)
+		wanted_label.visible = stars > 0 or charge_count > 0
+	if is_instance_valid(minimap):
+		minimap.wanted_level = stars
+		minimap.queue_redraw()
+	if is_instance_valid(police_patrol):
+		police_patrol.visible = stars > 0
+
+func _create_police_pursuit_vehicle() -> void:
+	police_patrol = Node3D.new()
+	police_patrol.name = "PolicePursuitAI"
+	police_patrol.position = Vector3(-85.0, 0.0, -85.0)
+	police_patrol.visible = false
+	game_world.add_child(police_patrol)
+
+	var body := MeshInstance3D.new()
+	var body_mesh := BoxMesh.new()
+	body_mesh.size = Vector3(2.15, 0.85, 4.3)
+	body.mesh = body_mesh
+	var body_material := StandardMaterial3D.new()
+	body_material.albedo_color = Color(0.055, 0.075, 0.11)
+	body_material.roughness = 0.72
+	body.material_override = body_material
+	body.position.y = 0.78
+	police_patrol.add_child(body)
+
+	var roof := MeshInstance3D.new()
+	var roof_mesh := BoxMesh.new()
+	roof_mesh.size = Vector3(1.55, 0.48, 1.85)
+	roof.mesh = roof_mesh
+	var roof_material := StandardMaterial3D.new()
+	roof_material.albedo_color = Color(0.86, 0.89, 0.92)
+	roof.material_override = roof_material
+	roof.position = Vector3(0.0, 1.38, -0.15)
+	police_patrol.add_child(roof)
+
+	var red := MeshInstance3D.new()
+	var red_mesh := BoxMesh.new()
+	red_mesh.size = Vector3(0.52, 0.16, 0.3)
+	red.mesh = red_mesh
+	var red_material := StandardMaterial3D.new()
+	red_material.albedo_color = Color(1.0, 0.015, 0.025)
+	red_material.emission_enabled = true
+	red_material.emission = Color(1.0, 0.01, 0.02)
+	red.material_override = red_material
+	red.position = Vector3(-0.38, 1.72, -0.15)
+	red.name = "PursuitRedLight"
+	police_patrol.add_child(red)
+
+	var blue := MeshInstance3D.new()
+	var blue_mesh := BoxMesh.new()
+	blue_mesh.size = Vector3(0.52, 0.16, 0.3)
+	blue.mesh = blue_mesh
+	var blue_material := StandardMaterial3D.new()
+	blue_material.albedo_color = Color(0.015, 0.12, 1.0)
+	blue_material.emission_enabled = true
+	blue_material.emission = Color(0.015, 0.08, 1.0)
+	blue.material_override = blue_material
+	blue.position = Vector3(0.38, 1.72, -0.15)
+	blue.name = "PursuitBlueLight"
+	police_patrol.add_child(blue)
+
+func _update_wanted_system(delta: float) -> void:
+	pedestrian_collision_cooldown = maxf(0.0, pedestrian_collision_cooldown - delta)
+	if not is_instance_valid(wanted_system):
+		return
+
+	# The existing prototype represents pedestrians as lightweight NPC nodes.
+	# Detect a vehicle contact once per NPC without adding expensive physics bodies.
+	if driving and is_instance_valid(vehicle) and absf(vehicle_speed) > 3.5 and pedestrian_collision_cooldown <= 0.0:
+		for npc in npc_nodes:
+			if not is_instance_valid(npc) or not npc.name.begins_with("CIVILIAN_NPC"):
+				continue
+			if npc.has_meta("wanted_collision_registered"):
+				continue
+			if vehicle.global_position.distance_to(npc.global_position) <= 3.0:
+				npc.set_meta("wanted_collision_registered", true)
+				wanted_system.call("register_pedestrian_collision")
+				pedestrian_collision_cooldown = 1.4
+				if is_instance_valid(status_label):
+					status_label.text = "INFRACCIÓN REGISTRADA · COLISIÓN CON PEATÓN"
+				break
+
+	if is_instance_valid(minimap):
+		minimap.alert_phase = lights_red
+		minimap.wanted_level = int(wanted_system.get("stars"))
+		minimap.queue_redraw()
+
+	if is_instance_valid(police_patrol):
+		var current_stars := int(wanted_system.get("stars"))
+		police_patrol.visible = current_stars > 0
+		if current_stars > 0:
+			var target_position := vehicle.global_position if driving and is_instance_valid(vehicle) else player.global_position
+			var offset := target_position - police_patrol.global_position
+			offset.y = 0.0
+			var distance := offset.length()
+			if distance > 5.0:
+				var chase_speed := 7.0 + float(current_stars) * 1.5
+				police_patrol.global_position += offset.normalized() * minf(chase_speed * delta, distance - 4.0)
+				police_patrol.rotation.y = atan2(offset.x, offset.z)
+			var red_light_node := police_patrol.get_node_or_null("PursuitRedLight") as MeshInstance3D
+			var blue_light_node := police_patrol.get_node_or_null("PursuitBlueLight") as MeshInstance3D
+			if is_instance_valid(red_light_node):
+				red_light_node.visible = lights_red
+			if is_instance_valid(blue_light_node):
+				blue_light_node.visible = not lights_red
+
+# Connect traffic-light trigger areas to this method when their signal changes.
+# An assigned emergency call with the siren enabled is treated as authorized response.
+func report_red_light_violation() -> void:
+	if not is_instance_valid(wanted_system):
+		return
+	var authorized_emergency := dispatch_target_active and siren_enabled
+	wanted_system.call("register_red_light_violation", authorized_emergency)
+	if not authorized_emergency and is_instance_valid(status_label):
+		status_label.text = "INFRACCIÓN REGISTRADA · SEMÁFORO EN ROJO"
+
 func _create_dispatch_system() -> void:
 	dispatch_layer = load("res://dispatch_system.gd").new()
 	dispatch_layer.name = "DispatchSystem"
@@ -2445,6 +2592,24 @@ func _create_hud() -> void:
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status_label.add_theme_font_size_override("font_size", 12)
 	top.add_child(status_label)
+
+	wanted_label = Label.new()
+	wanted_label.name = "WantedStars"
+	wanted_label.text = "BÚSQUEDA  ☆☆☆☆☆"
+	wanted_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	wanted_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	wanted_label.anchor_left = 0.30
+	wanted_label.anchor_right = 0.70
+	wanted_label.anchor_top = 0.075
+	wanted_label.anchor_bottom = 0.075
+	wanted_label.offset_top = 0
+	wanted_label.offset_bottom = 30
+	wanted_label.add_theme_font_size_override("font_size", 18)
+	wanted_label.add_theme_color_override("font_color", Color(1.0, 0.82, 0.22))
+	wanted_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.9))
+	wanted_label.add_theme_constant_override("shadow_offset_x", 2)
+	wanted_label.add_theme_constant_override("shadow_offset_y", 2)
+	hud_layer.add_child(wanted_label)
 
 	minimap = MinimapControl.new()
 	minimap.name = "Minimapa"
