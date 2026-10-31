@@ -1,5 +1,9 @@
 name: Build F.D.F.R. (Windows + Android)
 
+concurrency:
+  group: fdfr-build-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
@@ -84,7 +88,11 @@ jobs:
           EOF
           VEHICLE_DIR="assets/vehicles"
           ROLE_DIR="assets/characters"
-          mkdir -p "$VEHICLE_DIR" "$ROLE_DIR"
+          mkdir -p "$VEHICLE_DIR/Textures" "$ROLE_DIR"
+          # Kenney emergency vehicle GLBs reference the shared colormap at this relative path.
+          cp "$ASSET_DIR/Textures/colormap.png" "$VEHICLE_DIR/Textures/colormap.png"
+          test -s "$VEHICLE_DIR/Textures/colormap.png"
+          test -s "$ROAD_TEXTURE_DIR/colormap.png"
           VEHICLE_BASE="https://raw.githubusercontent.com/shorepine/kenney/main/3d/car"
           for model in police ambulance firetruck sedan suv; do
             curl -L --fail --retry 3 "$VEHICLE_BASE/$model.glb" -o "$VEHICLE_DIR/$model.glb"
