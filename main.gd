@@ -125,6 +125,7 @@ var traffic_signal_elapsed := 0.0
 var traffic_signal_crossed: Dictionary = {}
 var dispatch_target_position := Vector3.ZERO
 var dispatch_target_active := false
+var dispatch_is_fire_call := false
 var game_active := false
 var driving := false
 var invert_camera := false
@@ -2246,7 +2247,7 @@ func _update_wanted_system(delta: float) -> void:
 func report_red_light_violation() -> void:
 	if not is_instance_valid(wanted_system):
 		return
-	var authorized_emergency := dispatch_target_active and siren_enabled
+	var authorized_emergency := dispatch_target_active and dispatch_is_fire_call and siren_enabled
 	wanted_system.call("register_red_light_violation", authorized_emergency)
 	if not authorized_emergency and is_instance_valid(status_label):
 		status_label.text = "INFRACCIÓN REGISTRADA · SEMÁFORO EN ROJO"
@@ -2260,6 +2261,7 @@ func _create_dispatch_system() -> void:
 	dispatch_layer.mission_failed.connect(_on_mission_failed)
 
 func _on_dispatch_call_accepted(location: Vector3, description: String) -> void:
+	dispatch_is_fire_call = description.to_lower().contains("incendio") or description.to_lower().contains("fuego")
 	rescue_scene_reached = false
 	rescue_victim_active = false
 	if is_instance_valid(rescue_victim):
@@ -2337,6 +2339,7 @@ func _on_mission_completed(reward: int, description: String) -> void:
 
 func _on_mission_failed(description: String) -> void:
 	dispatch_target_active = false
+	dispatch_is_fire_call = false
 	rescue_victim_active = false
 	rescue_scene_reached = false
 	if is_instance_valid(rescue_victim):
