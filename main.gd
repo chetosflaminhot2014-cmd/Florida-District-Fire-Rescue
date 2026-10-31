@@ -2084,7 +2084,7 @@ func _create_wanted_system() -> void:
 	wanted_system = wanted_script.new()
 	wanted_system.name = "WantedSystem"
 	add_child(wanted_system)
-	wanted_system.wanted_level_changed.connect(_on_wanted_level_changed)
+	wanted_system.connect("wanted_level_changed", _on_wanted_level_changed)
 
 func _on_wanted_level_changed(stars: int, charge_count: int) -> void:
 	if is_instance_valid(wanted_label):
@@ -2596,6 +2596,7 @@ func _create_hud() -> void:
 	wanted_label = Label.new()
 	wanted_label.name = "WantedStars"
 	wanted_label.text = "BÚSQUEDA  ☆☆☆☆☆"
+	wanted_label.visible = false
 	wanted_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	wanted_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	wanted_label.anchor_left = 0.30
