@@ -120,6 +120,9 @@ var wanted_system: Node
 var police_patrol: Node3D
 var minimap: MinimapControl
 var pedestrian_collision_cooldown := 0.0
+var traffic_signals: Array[Dictionary] = []
+var traffic_signal_elapsed := 0.0
+var traffic_signal_crossed: Dictionary = {}
 var dispatch_target_position := Vector3.ZERO
 var dispatch_target_active := false
 var game_active := false
@@ -257,6 +260,7 @@ func _process(delta: float) -> void:
 	if not game_active:
 		return
 	_update_npcs(delta)
+	_update_traffic_signals(delta)
 	_update_wanted_system(delta)
 	_update_city_traffic(delta)
 	_update_remote_network(delta)
@@ -1657,9 +1661,44 @@ func _create_street_furniture() -> void:
 				var pz: float = iz - side * 8.0
 				_box("TrafficSignalPole", Vector3(0.14, 3.8, 0.14), Vector3(px, 1.9, pz), Color(0.12, 0.13, 0.14), false)
 				_box("TrafficSignalHousing", Vector3(0.42, 0.95, 0.32), Vector3(px, 3.65, pz), Color(0.055, 0.06, 0.065), false)
-				_sphere("SignalRed", Vector3(px, 3.94, pz - 0.18), 0.105, Color(0.9, 0.035, 0.025))
-				_sphere("SignalAmber", Vector3(px, 3.66, pz - 0.18), 0.105, Color(0.95, 0.55, 0.035))
-				_sphere("SignalGreen", Vector3(px, 3.38, pz - 0.18), 0.105, Color(0.04, 0.72, 0.19))
+				var red_lens := _sphere("SignalRed", Vector3(px, 3.94, pz - 0.18), 0.105, Color(0.9, 0.035, 0.025))
+				var amber_lens := _sphere("SignalAmber", Vector3(px, 3.66, pz - 0.18), 0.105, Color(0.95, 0.55, 0.035))
+				var green_lens := _sphere("SignalGreen", Vector3(px, 3.38, pz - 0.18), 0.105, Color(0.04, 0.72, 0.19))
+				traffic_signals.append({
+					"intersection": Vector3(ix, 0.0, iz),
+					"red": red_lens,
+					"amber": amber_lens,
+					"green": green_lens
+				})
+
+
+func _update_traffic_signals(delta: float) -> void:
+	if traffic_signals.is_empty():
+		return
+	traffic_signal_elapsed += delta
+	var phase_time := fposmod(traffic_signal_elapsed, 34.0)
+	var is_green := phase_time < 16.0
+	var is_amber := phase_time >= 16.0 and phase_time < 19.0
+	var is_red := phase_time >= 19.0
+	for signal_data in traffic_signals:
+		var red_lens := signal_data.get("red") as MeshInstance3D
+		var amber_lens := signal_data.get("amber") as MeshInstance3D
+		var green_lens := signal_data.get("green") as MeshInstance3D
+		if is_instance_valid(red_lens): red_lens.visible = is_red
+		if is_instance_valid(amber_lens): amber_lens.visible = is_amber
+		if is_instance_valid(green_lens): green_lens.visible = is_green
+
+	if not driving or not is_instance_valid(vehicle):
+		return
+	for index in range(traffic_signals.size()):
+		var intersection: Vector3 = traffic_signals[index].get("intersection", Vector3.ZERO)
+		var player_position := vehicle.global_position
+		var flat_distance := Vector2(player_position.x - intersection.x, player_position.z - intersection.z).length()
+		if flat_distance <= 6.5 and is_red and not bool(traffic_signal_crossed.get(index, false)):
+			traffic_signal_crossed[index] = true
+			report_red_light_violation()
+		elif flat_distance > 12.0:
+			traffic_signal_crossed[index] = false
 
 func _create_trees() -> void:
 	for i in range(34):
