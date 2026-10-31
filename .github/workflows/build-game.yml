@@ -10,6 +10,7 @@ on:
       - "project.godot"
       - "dispatch_system.gd"
       - "wanted_system.gd"
+      - "career_system.gd"
       - "export_presets.cfg"
       - ".github/workflows/build-game.yml"
       - "city-roads-glb-pack-72-free-cc0-3d-models-glb.zip"
