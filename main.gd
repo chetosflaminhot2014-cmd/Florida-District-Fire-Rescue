@@ -213,6 +213,43 @@ func _ready() -> void:
 	# CI-only gameplay smoke test: build the city, character, patrol car, and HUD headlessly.
 	if OS.get_cmdline_user_args().has("--smoke-test"):
 		_start_game(false)
+		call_deferred("_run_smoke_test")
+
+func _run_smoke_test() -> void:
+	var failures: Array[String] = []
+	if not game_active or not is_instance_valid(game_world):
+		failures.append("El mundo no inició.")
+	if not is_instance_valid(player):
+		failures.append("No se creó el bombero.")
+	if not is_instance_valid(vehicle):
+		failures.append("No se creó el camión.")
+	if not is_instance_valid(minimap):
+		failures.append("No se creó el minimapa.")
+	if not is_instance_valid(dispatch_layer):
+		failures.append("No se creó el sistema 911.")
+	if not has_node("/root/CareerSystem"):
+		failures.append("No está disponible CareerSystem.")
+	else:
+		var achievements: Array[Dictionary] = CareerSystem.get_achievements_snapshot()
+		if achievements.size() != 50:
+			failures.append("Se esperaban 50 logros; encontrados: %d." % achievements.size())
+		var shifts_before := int(CareerSystem.get_stats_snapshot().get("shifts_started",0))
+		CareerSystem.start_shift()
+		if int(CareerSystem.get_stats_snapshot().get("shifts_started",0)) != shifts_before:
+			failures.append("start_shift duplicó un turno activo.")
+		CareerSystem.end_shift()
+	_spawn_fire(Vector3.ZERO)
+	if not fire_active or not is_instance_valid(fire_visual):
+		failures.append("No se pudo crear el incendio de prueba.")
+	_on_mission_failed("Prueba automática de integración")
+	if fire_active:
+		failures.append("El sistema no limpió el incendio al cerrar la llamada.")
+	if failures.is_empty():
+		print("FDFR_SMOKE_TEST_OK: mundo, bombero, camión, HUD, despacho, carrera, logros e incendio.")
+		get_tree().quit(0)
+	else:
+		push_error("FDFR_SMOKE_TEST_FAILED: " + " | ".join(failures))
+		get_tree().quit(1)
 
 func _create_startup_fallback() -> CanvasLayer:
 	var layer := CanvasLayer.new()
