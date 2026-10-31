@@ -174,6 +174,9 @@ var fire_embers: CPUParticles3D
 var water_drops: Array[MeshInstance3D] = []
 var gas_station_positions: Array[Vector3] = []
 var fuel_level := 100.0
+var water_level := 100.0
+var vehicle_health := 100.0
+var vehicle_collision_cooldown := 0.0
 var refuel_notice_timer := 0.0
 var vehicle_cockpit_camera := false
 # First-person is the default on foot; V / the mobile camera button switches perspective.
@@ -278,9 +281,9 @@ func _process(delta: float) -> void:
 		if driving:
 			var speed_kmh := roundi(absf(vehicle_speed) * 3.6)
 			var gear := "R" if vehicle_speed < -0.2 else "D"
-			status_label.text = "CAMIÓN · %d km/h · COMBUSTIBLE %d%% · LUCES %s" % [speed_kmh, roundi(fuel_level), "ON" if emergency_lights_enabled else "OFF"]
+			status_label.text = "CAMIÓN · %d km/h · COMB %d%% · AGUA %d%% · DAÑOS %d%% · LUCES %s" % [speed_kmh, roundi(fuel_level), roundi(water_level), 100 - roundi(vehicle_health), "ON" if emergency_lights_enabled else "OFF"]
 		else:
-			status_label.text = "BOMBERO A PIE · WASD · E PARA SUBIR/BAJAR · NPC: " + str(npc_nodes.size())
+			status_label.text = "BOMBERO A PIE · AGUA %d%% · WASD · E PARA SUBIR/BAJAR" % roundi(water_level)
 
 func _create_menu_scene_preview() -> void:
 	# Menú cinematográfico: una escena 3D de calle de Florida, no una pantalla gris.
@@ -1530,6 +1533,66 @@ func _create_gas_stations() -> void:
 		sign_3d.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 		game_world.add_child(sign_3d)
 
+
+func _apply_vehicle_collision_damage() -> void:
+	if vehicle_collision_cooldown > 0.0 or not is_instance_valid(vehicle):
+		return
+	var collision_count := vehicle.get_slide_collision_count()
+	if collision_count <= 0 or absf(vehicle_speed) < 7.0:
+		return
+	var impact_speed := absf(vehicle_speed)
+	var damage := clampf((impact_speed - 5.0) * 1.25, 2.0, 22.0)
+	vehicle_health = maxf(0.0, vehicle_health - damage)
+	vehicle_speed *= 0.45
+	vehicle_collision_cooldown = 1.0
+	if vehicle_health <= 0.0:
+		vehicle_speed = 0.0
+		if is_instance_valid(status_label):
+			status_label.text = "CAMIÓN FUERA DE SERVICIO · REPARA EN ESTACIÓN 01"
+	elif is_instance_valid(status_label):
+		status_label.text = "IMPACTO · DAÑOS %d%% · CONDUCE CON PRECAUCIÓN" % (100 - roundi(vehicle_health))
+
+
+func _try_refill_water() -> void:
+	if not driving or not is_instance_valid(vehicle):
+		if is_instance_valid(status_label):
+			status_label.text = "RECARGAR AGUA · SUBE AL CAMIÓN Y ACÉRCATE A ESTACIÓN 01"
+		return
+	if absf(vehicle_speed) > 0.8:
+		if is_instance_valid(status_label):
+			status_label.text = "RECARGAR AGUA · DETÉN EL CAMIÓN"
+		return
+	var station_position := Vector3(60.0, 0.0, 115.0)
+	var distance := Vector2(vehicle.global_position.x - station_position.x, vehicle.global_position.z - station_position.z).length()
+	if distance > 28.0:
+		if is_instance_valid(status_label):
+			status_label.text = "RECARGAR AGUA · REGRESA A ESTACIÓN 01"
+		return
+	water_level = 100.0
+	if is_instance_valid(status_label):
+		status_label.text = "TANQUE DE AGUA LLENO · 100%"
+
+
+func _try_repair_vehicle() -> void:
+	if not driving or not is_instance_valid(vehicle):
+		if is_instance_valid(status_label):
+			status_label.text = "REPARACIÓN · SUBE AL CAMIÓN Y LLÉVALO A ESTACIÓN 01"
+		return
+	if absf(vehicle_speed) > 0.8:
+		if is_instance_valid(status_label):
+			status_label.text = "REPARACIÓN · DETÉN EL CAMIÓN"
+		return
+	var station_position := Vector3(60.0, 0.0, 115.0)
+	var distance := Vector2(vehicle.global_position.x - station_position.x, vehicle.global_position.z - station_position.z).length()
+	if distance > 28.0:
+		if is_instance_valid(status_label):
+			status_label.text = "REPARACIÓN · DEBES ESTAR EN ESTACIÓN 01"
+		return
+	vehicle_health = 100.0
+	if is_instance_valid(status_label):
+		status_label.text = "MANTENIMIENTO COMPLETADO · CAMIÓN AL 100%"
+
+
 func _try_refuel() -> void:
 	if not driving or not is_instance_valid(vehicle):
 		if is_instance_valid(status_label):
@@ -1538,6 +1601,14 @@ func _try_refuel() -> void:
 	if absf(vehicle_speed) > 0.8:
 		if is_instance_valid(status_label):
 			status_label.text = "REPOSTAR · Detén el camión primero"
+		return
+	var station_position := Vector3(60.0, 0.0, 115.0)
+	var station_distance := Vector2(vehicle.global_position.x - station_position.x, vehicle.global_position.z - station_position.z).length()
+	if station_distance <= 28.0:
+		fuel_level = 100.0
+		water_level = 100.0
+		if is_instance_valid(status_label):
+			status_label.text = "ESTACIÓN 01 · COMBUSTIBLE Y AGUA AL 100%"
 		return
 	var nearest_distance := INF
 	for station_position in gas_station_positions:
@@ -2364,6 +2435,10 @@ func _on_mission_failed(description: String) -> void:
 func _toggle_extinguishing() -> void:
 	if not game_active:
 		return
+	if water_level <= 0.0:
+		if is_instance_valid(status_label):
+			status_label.text = "DEPÓSITO DE AGUA VACÍO · REGRESA A LA ESTACIÓN"
+		return
 	extinguishing = not extinguishing
 	if not extinguishing:
 		_set_water_stream_visible(false)
@@ -2539,8 +2614,9 @@ func _update_fire_response(delta: float) -> void:
 	var nozzle_position := responder_position + Vector3(0, 1.25, 0)
 	var fire_target := fire_location + Vector3(0, 1.1, 0)
 	var distance := responder_position.distance_to(fire_location)
-	var water_reaching_fire := extinguishing and distance <= 16.0
+	var water_reaching_fire := extinguishing and distance <= 16.0 and water_level > 0.0
 	if water_reaching_fire:
+		water_level = maxf(0.0, water_level - delta * 8.0)
 		_ensure_water_stream()
 		_set_water_stream_visible(true)
 		for i in range(water_drops.size()):
@@ -2572,6 +2648,11 @@ func _update_fire_response(delta: float) -> void:
 				dispatch_layer.call("complete_fire_mission")
 			if is_instance_valid(status_label):
 				status_label.text = "INCENDIO CONTROLADO · Unidad disponible"
+	elif extinguishing and water_level <= 0.0:
+		extinguishing = false
+		_set_water_stream_visible(false)
+		if is_instance_valid(status_label):
+			status_label.text = "DEPÓSITO VACÍO · REGRESA A LA ESTACIÓN"
 	elif extinguishing and is_instance_valid(status_label):
 		status_label.text = "ACÉRCATE AL INCENDIO · %.0f m" % distance
 
@@ -2703,7 +2784,8 @@ func _create_hud() -> void:
 	_touch_button("FRENO", Vector2(-116, -366), Vector2(102, 42), func(): pass, Callable(), true)
 	_touch_button("REPOSTAR", Vector2(-116, -414), Vector2(102, 42), func(): pass, Callable(), true)
 	_touch_button("CÁMARA", Vector2(-116, -462), Vector2(102, 42), func(): pass, Callable(), true)
-	for control_name in ["LUCES", "CORRER", "FRENO", "REPOSTAR", "CÁMARA"]:
+	_touch_button("REPARAR", Vector2(-116, -510), Vector2(102, 42), func(): pass, Callable(), true)
+	for control_name in ["LUCES", "CORRER", "FRENO", "REPOSTAR", "CÁMARA", "REPARAR"]:
 		var secondary := hud_layer.find_child("Touch_" + control_name, true, false)
 		if is_instance_valid(secondary):
 			secondary.visible = false
@@ -2770,10 +2852,12 @@ func _touch_button(label_text: String, bottom_right_offset: Vector2, button_size
 		b.button_up.connect(func(): touch_brake = false)
 	elif label_text == "REPOSTAR":
 		b.pressed.connect(_try_refuel)
+	elif label_text == "REPARAR":
+		b.pressed.connect(_try_repair_vehicle)
 
 func _toggle_secondary_controls() -> void:
 	secondary_controls_open = not secondary_controls_open
-	for control_name in ["LUCES", "CORRER", "FRENO", "REPOSTAR", "CÁMARA"]:
+	for control_name in ["LUCES", "CORRER", "FRENO", "REPOSTAR", "CÁMARA", "REPARAR"]:
 		var secondary := hud_layer.find_child("Touch_" + control_name, true, false)
 		if is_instance_valid(secondary):
 			secondary.visible = secondary_controls_open
@@ -2910,6 +2994,10 @@ func _physics_process(delta: float) -> void:
 	input_dir += touch_move
 	input_dir = input_dir.limit_length(1.0)
 	if driving:
+		vehicle_collision_cooldown = maxf(0.0, vehicle_collision_cooldown - delta)
+		if vehicle_health <= 0.0:
+			vehicle_speed = move_toward(vehicle_speed, 0.0, PATROL_BRAKING * delta)
+			input_dir.y = 0.0
 		if fuel_level <= 0.0:
 			vehicle_speed = move_toward(vehicle_speed, 0.0, PATROL_BRAKING * delta)
 			input_dir.y = 0.0
@@ -2942,6 +3030,7 @@ func _physics_process(delta: float) -> void:
 		vehicle.velocity.z = forward.z * vehicle_speed
 		vehicle.velocity.y = 0.0
 		vehicle.move_and_slide()
+		_apply_vehicle_collision_damage()
 		vehicle.position.x = clampf(vehicle.position.x, -WORLD_LIMIT, WORLD_LIMIT)
 		vehicle.position.z = clampf(vehicle.position.z, -WORLD_LIMIT, WORLD_LIMIT)
 		return
@@ -2985,6 +3074,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_toggle_extinguishing()
 		elif event.keycode == KEY_G:
 			_try_refuel()
+		elif event.keycode == KEY_R:
+			_try_refill_water()
+		elif event.keycode == KEY_B:
+			_try_repair_vehicle()
 		elif event.keycode == KEY_C and driving:
 			_toggle_vehicle_camera()
 		elif event.keycode == KEY_V and not driving:
