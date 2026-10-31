@@ -885,6 +885,7 @@ func _create_world() -> void:
 		_create_district_markers()
 	else:
 		_create_osm_map_signage()
+		_create_traffic_signals()
 	_apply_graphics_quality()
 
 
@@ -1653,23 +1654,27 @@ func _create_street_furniture() -> void:
 			_box("StreetLampPole", Vector3(0.16, 5.2, 0.16), Vector3(x, 2.6, z), Color(0.16, 0.18, 0.2), false)
 			_box("StreetLampArm", Vector3(1.15, 0.12, 0.12), Vector3(x + 0.48, 5.08, z), Color(0.16, 0.18, 0.2), false)
 			_box("StreetLampHead", Vector3(0.55, 0.16, 0.3), Vector3(x + 0.95, 5.0, z), Color(0.95, 0.82, 0.55), false)
-	# A few signalised intersections near downtown, with red/amber/green lenses.
-	for ix in [-30.0, 0.0, 30.0]:
-		for iz in [-30.0, 0.0, 30.0]:
-			for side in [-1.0, 1.0]:
-				var px: float = ix + side * 8.0
-				var pz: float = iz - side * 8.0
-				_box("TrafficSignalPole", Vector3(0.14, 3.8, 0.14), Vector3(px, 1.9, pz), Color(0.12, 0.13, 0.14), false)
-				_box("TrafficSignalHousing", Vector3(0.42, 0.95, 0.32), Vector3(px, 3.65, pz), Color(0.055, 0.06, 0.065), false)
-				var red_lens := _sphere("SignalRed", Vector3(px, 3.94, pz - 0.18), 0.105, Color(0.9, 0.035, 0.025))
-				var amber_lens := _sphere("SignalAmber", Vector3(px, 3.66, pz - 0.18), 0.105, Color(0.95, 0.55, 0.035))
-				var green_lens := _sphere("SignalGreen", Vector3(px, 3.38, pz - 0.18), 0.105, Color(0.04, 0.72, 0.19))
-				traffic_signals.append({
-					"intersection": Vector3(ix, 0.0, iz),
-					"red": red_lens,
-					"amber": amber_lens,
-					"green": green_lens
-				})
+	_create_traffic_signals()
+
+func _create_traffic_signals() -> void:
+for ix in [-30.0, 0.0, 30.0]:
+	for iz in [-30.0, 0.0, 30.0]:
+		for side in [-1.0, 1.0]:
+			var px: float = ix + side * 8.0
+			var pz: float = iz - side * 8.0
+			_box("TrafficSignalPole", Vector3(0.14, 3.8, 0.14), Vector3(px, 1.9, pz), Color(0.12, 0.13, 0.14), false)
+			_box("TrafficSignalHousing", Vector3(0.42, 0.95, 0.32), Vector3(px, 3.65, pz), Color(0.055, 0.06, 0.065), false)
+			var red_lens := _sphere("SignalRed", Vector3(px, 3.94, pz - 0.18), 0.105, Color(0.9, 0.035, 0.025))
+			var amber_lens := _sphere("SignalAmber", Vector3(px, 3.66, pz - 0.18), 0.105, Color(0.95, 0.55, 0.035))
+			var green_lens := _sphere("SignalGreen", Vector3(px, 3.38, pz - 0.18), 0.105, Color(0.04, 0.72, 0.19))
+			traffic_signals.append({
+				"intersection": Vector3(ix, 0.0, iz),
+				"red": red_lens,
+				"amber": amber_lens,
+				"green": green_lens
+			})
+
+
 
 
 func _update_traffic_signals(delta: float) -> void:
@@ -1694,11 +1699,12 @@ func _update_traffic_signals(delta: float) -> void:
 		var intersection: Vector3 = traffic_signals[index].get("intersection", Vector3.ZERO)
 		var player_position := vehicle.global_position
 		var flat_distance := Vector2(player_position.x - intersection.x, player_position.z - intersection.z).length()
-		if flat_distance <= 6.5 and is_red and not bool(traffic_signal_crossed.get(index, false)):
-			traffic_signal_crossed[index] = true
+		var intersection_key := "%d:%d" % [roundi(intersection.x), roundi(intersection.z)]
+		if flat_distance <= 6.5 and is_red and not bool(traffic_signal_crossed.get(intersection_key, false)):
+			traffic_signal_crossed[intersection_key] = true
 			report_red_light_violation()
 		elif flat_distance > 12.0:
-			traffic_signal_crossed[index] = false
+			traffic_signal_crossed[intersection_key] = false
 
 func _create_trees() -> void:
 	for i in range(34):
