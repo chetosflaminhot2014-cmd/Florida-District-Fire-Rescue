@@ -26,6 +26,7 @@ var stats: Dictionary = {}
 var unlocked_achievements: Array[String] = []
 var _definitions: Array[Dictionary] = []
 var _save_timer := 0.0
+var _shift_active := false
 
 func _ready() -> void:
 	_init_stats()
@@ -33,13 +34,19 @@ func _ready() -> void:
 	_load_progress()
 
 func _process(delta: float) -> void:
+	if not _shift_active:
+		return
 	stats["seconds_played"] = float(stats.get("seconds_played",0.0)) + delta
+	stats["hours_played"] = float(stats.get("seconds_played",0.0)) / 3600.0
 	_save_timer += delta
 	if _save_timer >= 60.0:
 		_save_timer = 0.0
-		stats["hours_played"] = float(stats.get("seconds_played",0.0)) / 3600.0
 		_check_achievements()
 		_save_progress()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_PREDELETE:
+		end_shift()
 
 func _init_stats() -> void:
 	stats = {"calls_completed":0,"calls_failed":0,"fires_extinguished":0,"rescues_completed":0,
@@ -81,7 +88,19 @@ func _save_progress() -> void:
 		push_warning("No se pudo guardar la carrera F.D.F.R.: "+str(error))
 
 func start_shift() -> void:
+	if _shift_active:
+		return
+	_shift_active = true
 	record_stat("shifts_started",1)
+	_save_progress()
+
+func end_shift() -> void:
+	if not _shift_active:
+		_save_progress()
+		return
+	_shift_active = false
+	stats["hours_played"] = float(stats.get("seconds_played",0.0)) / 3600.0
+	_check_achievements()
 	_save_progress()
 
 func complete_mission(reward: int, description: String) -> void:
@@ -149,6 +168,18 @@ func get_achievement_total() -> int:
 
 func get_stats_snapshot() -> Dictionary:
 	return stats.duplicate(true)
+
+func get_achievements_snapshot() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for achievement in _definitions:
+		var item: Dictionary = achievement.duplicate(true)
+		var current := float(stats.get(str(item["stat"]),0.0))
+		var target := float(item["target"])
+		item["progress"] = minf(current,target)
+		item["unlocked"] = unlocked_achievements.has(str(item["id"]))
+		item["progress_percent"] = 100.0 if target <= 0.0 else clampf(current / target * 100.0,0.0,100.0)
+		result.append(item)
+	return result
 
 func _check_achievements() -> void:
 	for achievement in _definitions:
