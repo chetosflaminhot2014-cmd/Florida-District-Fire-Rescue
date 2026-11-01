@@ -2637,10 +2637,8 @@ func _make_fire_particles(node_name: String, particle_count: int, particle_lifet
 	color_gradient.set_color(0, start_color)
 	color_gradient.add_point(0.55, Color(start_color.r, start_color.g, start_color.b, start_color.a * 0.55))
 	color_gradient.set_color(1, end_color)
-	var color_texture := GradientTexture1D.new()
-	color_texture.gradient = color_gradient
 	particles.color = start_color
-	particles.color_ramp = color_texture
+	particles.color_ramp = color_gradient
 	var particle_mesh := SphereMesh.new()
 	particle_mesh.radius = 0.22
 	particle_mesh.height = 0.44
