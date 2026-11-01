@@ -241,6 +241,8 @@ func _run_smoke_test() -> void:
 	_spawn_fire(Vector3.ZERO)
 	if not fire_active or not is_instance_valid(fire_visual):
 		failures.append("No se pudo crear el incendio de prueba.")
+	if not is_instance_valid(fire_particles) or not is_instance_valid(fire_smoke) or not is_instance_valid(fire_embers):
+		failures.append("No se crearon correctamente las partículas de fuego, humo y brasas.")
 	_on_mission_failed("Prueba automática de integración")
 	if fire_active:
 		failures.append("El sistema no limpió el incendio al cerrar la llamada.")
@@ -2622,22 +2624,23 @@ func _make_fire_particles(node_name: String, particle_count: int, particle_lifet
 	particles.randomness = 0.45
 	particles.local_coords = true
 	particles.emitting = true
-	var process_material := ParticleProcessMaterial.new()
-	process_material.direction = emission_direction
-	process_material.spread = particle_spread
-	process_material.initial_velocity_min = velocity_min
-	process_material.initial_velocity_max = velocity_max
-	process_material.gravity = particle_gravity
-	process_material.scale_min = scale_minimum
-	process_material.scale_max = scale_maximum
+	# CPUParticles3D exposes particle parameters directly; it does not use
+	# ParticleProcessMaterial (that resource belongs to GPUParticles3D).
+	particles.direction = emission_direction
+	particles.spread = particle_spread
+	particles.initial_velocity_min = velocity_min
+	particles.initial_velocity_max = velocity_max
+	particles.gravity = particle_gravity
+	particles.scale_amount_min = scale_minimum
+	particles.scale_amount_max = scale_maximum
 	var color_gradient := Gradient.new()
 	color_gradient.set_color(0, start_color)
 	color_gradient.add_point(0.55, Color(start_color.r, start_color.g, start_color.b, start_color.a * 0.55))
 	color_gradient.set_color(1, end_color)
 	var color_texture := GradientTexture1D.new()
 	color_texture.gradient = color_gradient
-	process_material.color_ramp = color_texture
-	particles.process_material = process_material
+	particles.color = start_color
+	particles.color_ramp = color_texture
 	var particle_mesh := SphereMesh.new()
 	particle_mesh.radius = 0.22
 	particle_mesh.height = 0.44
