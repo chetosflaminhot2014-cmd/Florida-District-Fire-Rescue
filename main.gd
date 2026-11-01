@@ -2648,7 +2648,7 @@ func _make_fire_particles(node_name: String, particle_count: int, particle_lifet
 	particle_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	particle_material.emission_enabled = true
 	particle_material.emission = start_color
-	particles.draw_pass_1 = particle_mesh
+	particles.mesh = particle_mesh
 	particles.material_override = particle_material
 	particles.visibility_aabb = AABB(Vector3(-8, -2, -8), Vector3(16, 18, 16))
 	return particles
