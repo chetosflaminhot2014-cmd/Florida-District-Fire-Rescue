@@ -1,6 +1,6 @@
 # F.D.F.R. — Florida District Fire & Rescue
 
-**Versión:** 0.2.0 Alpha  
+**Versión:** 0.2.1 Alpha  
 **Motor:** Godot 4.7.2  
 **Plataformas:** Windows PC y Android
 
@@ -17,6 +17,12 @@ F.D.F.R. es un simulador de bomberos y rescate en desarrollo, ambientado en una 
 - Combustible, depósito de agua, daños y reparación del vehículo.
 - Carrera persistente con rangos, experiencia, créditos, estadísticas y 50 logros.
 - Base de multijugador con sincronización inicial de jugadores.
+
+## Cambios técnicos de 0.2.1
+
+- Sincronizada la versión del APK Android con la versión del proyecto (version code 3, nombre 0.2.1).
+- Validación de posiciones y rotaciones recibidas por RPC para rechazar valores no finitos o fuera del límite permitido.
+- Validación de remitentes y mensajes de despacho multijugador; se eliminan mensajes vacíos y se limita su longitud.
 
 ## Cambios técnicos de 0.2.0
 
