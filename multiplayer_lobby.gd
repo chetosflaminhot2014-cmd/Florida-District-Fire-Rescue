@@ -1,5 +1,5 @@
 extends Node
-## Multiplayer networking for Police Officer Simulator.
+## Multiplayer networking for F.D.F.R.
 ## Host mode supports LAN and internet clients when the host network permits UDP port 7000.
 
 signal peer_joined(peer_id: int)
@@ -50,7 +50,7 @@ func leave_game() -> void:
 	remote_states.clear()
 
 func publish_player_state(position: Vector3, rotation_y: float) -> void:
-	if multiplayer.multiplayer_peer is OfflineMultiplayerPeer:
+	if multiplayer.multiplayer_peer is OfflineMultiplayerPeer or not _is_valid_world_position(position) or not is_finite(rotation_y):
 		return
 	if multiplayer.is_server():
 		_receive_player_state.rpc(1, position, rotation_y)
@@ -62,6 +62,8 @@ func _submit_player_state(position: Vector3, rotation_y: float) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender := multiplayer.get_remote_sender_id()
+	if sender <= 0 or not multiplayer.get_peers().has(sender) or not _is_valid_world_position(position) or not is_finite(rotation_y):
+		return
 	_receive_player_state(sender, position, rotation_y)
 	_receive_player_state.rpc(sender, position, rotation_y)
 
@@ -74,7 +76,12 @@ func _receive_player_state(peer_id: int, position: Vector3, rotation_y: float) -
 func _submit_dispatch(message: String, location: Vector3) -> void:
 	if not multiplayer.is_server():
 		return
-	var safe_message := message.left(180)
+	var sender := multiplayer.get_remote_sender_id()
+	if sender <= 0 or not multiplayer.get_peers().has(sender) or not _is_valid_world_position(location):
+		return
+	var safe_message := message.strip_edges().left(180)
+	if safe_message.is_empty():
+		return
 	_dispatch_broadcast(safe_message, location)
 	_dispatch_broadcast.rpc(safe_message, location)
 
@@ -83,13 +90,21 @@ func _dispatch_broadcast(message: String, location: Vector3) -> void:
 	dispatch_received.emit(message, location)
 
 func broadcast_dispatch(message: String, location: Vector3) -> void:
+	if not _is_valid_world_position(location):
+		return
+	var safe_message := message.strip_edges().left(180)
+	if safe_message.is_empty():
+		return
 	if multiplayer.multiplayer_peer is OfflineMultiplayerPeer:
-		dispatch_received.emit(message, location)
+		dispatch_received.emit(safe_message, location)
 	elif multiplayer.is_server():
-		_dispatch_broadcast.rpc(message.left(180), location)
-		dispatch_received.emit(message.left(180), location)
+		_dispatch_broadcast.rpc(safe_message, location)
+		dispatch_received.emit(safe_message, location)
 	else:
-		_submit_dispatch.rpc_id(1, message.left(180), location)
+		_submit_dispatch.rpc_id(1, safe_message, location)
+
+func _is_valid_world_position(position: Vector3) -> bool:
+	return position.is_finite() and position.length_squared() <= 25000000.0
 
 func _on_peer_connected(peer_id: int) -> void:
 	peer_joined.emit(peer_id)
